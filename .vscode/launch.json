@@ -1,0 +1,19 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    { "name": "Debug STM32 (OpenOCD)",
+      "type": "cortex-debug",
+      "request": "launch",
+      "servertype": "openocd",
+      "executable": "${workspaceFolder}/build/Debug/${workspaceFolderBasename}.elf",
+      "cwd": "${workspaceFolder}",
+      "runToEntryPoint": "main",
+      "svdFile": "${workspaceFolder}/.vscode/STM32L476.svd",
+      "configFiles": [
+        "C:/openocd/bin/scripts/interface/stlink.cfg",
+        "C:/openocd/bin/scripts/target/stm32l4x.cfg"
+      ],
+      "preLaunchTask": "CMake: build"
+    }
+  ]
+}
