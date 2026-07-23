@@ -46,7 +46,7 @@ HAL_StatusTypeDef EEPROM_WritePage(I2C_HandleTypeDef *hi2c, uint8_t block, uint8
     // Write data in chunks, until we reach the string length or the end of EEPROM memory
     while (bytes_written < len) {
         uint16_t current_addr = global_address + bytes_written; // Calculate the current global address
-        uint8_t current_block = (current_addr >> 8) & 0x03; // 0x03 bitmask to prevent malformed inputs
+        uint8_t current_block = (current_addr >> 8) & 0x03; // Flop over to next block if necessary
         uint8_t reg_addr = current_addr & 0xFF; // Find the offset in the current block (0-256)
 
         uint16_t dev_address = (0x50 | current_block) << 1; // Convert to 8-bit address for HAL functions
@@ -67,6 +67,7 @@ HAL_StatusTypeDef EEPROM_WritePage(I2C_HandleTypeDef *hi2c, uint8_t block, uint8
             (uint16_t)bytes_to_write,
             HAL_MAX_DELAY
         );
+        HAL_Delay(5); // Write cycle delay
 
         if (status == HAL_OK) {
             // Poll device readiness until it responds with an ACK
@@ -99,6 +100,7 @@ void EEPROM_ReadSequential(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t reg_a
 	    size,
 	    HAL_MAX_DELAY
 	);
+    HAL_Delay(5); // Read cycle delay
 
 	if (status == HAL_OK) {
 		// Poll device readiness until it responds with an ACK
@@ -134,6 +136,7 @@ HAL_StatusTypeDef EEPROM_ReadMessage(I2C_HandleTypeDef *hi2c, uint8_t block, uin
 			1,                     // 1 Byte
 			HAL_MAX_DELAY
 		);
+        HAL_Delay(5); // Read cycle delay
 
         if (status != HAL_OK || buffer[i] == '\0' || (uint8_t)buffer[i] == 0xFF) {
 			break;
