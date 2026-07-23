@@ -20,6 +20,8 @@
 #include "main.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "eeprom.h"
+
 #include "stdbool.h"
 #include "string.h"
 #include "stdio.h"
@@ -107,6 +109,9 @@ void SplitAndRemove_String(char *str,char *sub);
 
 void LCD_Backlight_On(void);
 void LCD_Backlight_Off(void);
+
+
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -150,6 +155,7 @@ int main(void)
   uint32_t scroll_pos = 0;
   HAL_UART_RegisterCallback(&huart2, HAL_UART_RX_COMPLETE_CB_ID, Handle_UART);
   HAL_UART_Receive_IT(&huart2, &uart2_byte, 1); // put byte from UART2 in "uart2_byte"
+  EEPROM_ReadMessage(&hi2c1, 0, 0, (char*)message, sizeof(message)); // Read the message from EEPROM at startup
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -168,7 +174,7 @@ int main(void)
 		  if(strcmp(command, commands[0]) == 0){
 			  StopText();
 			  SplitAndRemove_String((char*)message,(char*)commands[0]);
-			  //EEPROM_WritePage(&hi2c1,0,0,(uint8_t*)message,sizeof(message));
+			  EEPROM_WritePage(&hi2c1,0,0,(uint8_t*)message,sizeof(message));
 			  StartText((char*)message);
 		  }else if(strcmp(command, commands[1]) ==0){
 			  StopText();

@@ -42,12 +42,14 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/main.c
+    Core/Src/eeprom.c
     # Add extra Core/Src/*.c files here as your project grows
 )
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Inc
+    Core/Src
 )
 
 # Add project symbols (macros)

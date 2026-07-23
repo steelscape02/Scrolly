@@ -32,11 +32,16 @@ void EEPROM_WriteByte(I2C_HandleTypeDef *hi2c1, uint8_t block, uint8_t word_addr
   * @param  data: Pointer to the buffer containing data to write
   * @param  len: Total number of bytes to write
   */
-void EEPROM_WritePage(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t start_address, const uint8_t *data, size_t len) {
+HAL_StatusTypeDef EEPROM_WritePage(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t start_address, const uint8_t *data, size_t len) {
     size_t bytes_written = 0;
 
     // Convert starting block and offset into a single linear global address (0 to 1023)
     uint16_t global_address = ((uint16_t)(block & 0x03) << 8) | start_address;
+    HAL_StatusTypeDef status = HAL_OK;
+
+    if (hi2c == NULL || data == NULL || global_address >= 1024 || len > 1024 - global_address) {
+        return HAL_ERROR;
+    }
 
     while (bytes_written < len) {
         // 1. Calculate current global address and target block
@@ -53,7 +58,7 @@ void EEPROM_WritePage(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t start_addr
             bytes_to_write = bytes_to_page_end;
         }
 
-        HAL_StatusTypeDef status = HAL_I2C_Mem_Write(
+        status = HAL_I2C_Mem_Write(
             hi2c,
             dev_address,
             reg_addr,
@@ -65,7 +70,10 @@ void EEPROM_WritePage(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t start_addr
 
         if (status == HAL_OK) {
             // Poll device readiness until it responds with an ACK
-            HAL_I2C_IsDeviceReady(hi2c, dev_address, 10, HAL_MAX_DELAY);
+            status = HAL_I2C_IsDeviceReady(hi2c, dev_address, 10, HAL_MAX_DELAY);
+            if (status != HAL_OK) {
+                break;
+            }
         } else {
             // Error handling (e.g., bus error, disconnected EEPROM)
             break;
@@ -73,6 +81,8 @@ void EEPROM_WritePage(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t start_addr
 
         bytes_written += bytes_to_write;
     }
+
+    return status;
 }
 
 void EEPROM_ReadSequential(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t reg_addr, uint8_t *buffer, uint16_t size){
@@ -98,11 +108,15 @@ void EEPROM_ReadSequential(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t reg_a
 	}
 }
 
-void EEPROM_ReadMessage(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t start_address, char *buffer){
+void EEPROM_ReadMessage(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t start_address, char *buffer, size_t buffer_size){
 
-	int i=0;
-	uint16_t global_address = ((uint16_t)(block & 0x03) << 8) | start_address;
-	for (i = 0; i < 256 - 1; i++) {
+    size_t i = 0;
+    uint16_t global_address = ((uint16_t)(block & 0x03) << 8) | start_address;
+    if (buffer == NULL || buffer_size == 0) {
+        return;
+    }
+
+    for (i = 0; i < buffer_size - 1 && global_address + i < 1024; i++) {
 		uint16_t current_addr = global_address + i;
 		uint8_t current_block = (current_addr >> 8) & 0x03;
 		uint8_t reg_addr = current_addr & 0xFF;
@@ -124,5 +138,6 @@ void EEPROM_ReadMessage(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t start_ad
 		}
 	}
 	buffer[i] = '\0'; // Guarantee null-termination
+
 }
 
