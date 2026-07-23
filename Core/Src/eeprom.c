@@ -46,7 +46,7 @@ HAL_StatusTypeDef EEPROM_WritePage(I2C_HandleTypeDef *hi2c, uint8_t block, uint8
     // Write data in chunks, until we reach the string length or the end of EEPROM memory
     while (bytes_written < len) {
         uint16_t current_addr = global_address + bytes_written; // Calculate the current global address
-        uint8_t current_block = (current_addr >> 8) & 0x03; // 0x03 bitmask to prevent malformed inputs
+        uint8_t current_block = (current_addr >> 8) & 0x03; // Flop over to next block if necessary
         uint8_t reg_addr = current_addr & 0xFF; // Find the offset in the current block (0-256)
 
         uint16_t dev_address = (0x50 | current_block) << 1; // Convert to 8-bit address for HAL functions
