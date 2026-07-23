@@ -67,6 +67,7 @@ HAL_StatusTypeDef EEPROM_WritePage(I2C_HandleTypeDef *hi2c, uint8_t block, uint8
             (uint16_t)bytes_to_write,
             HAL_MAX_DELAY
         );
+        HAL_Delay(5); // Write cycle delay
 
         if (status == HAL_OK) {
             // Poll device readiness until it responds with an ACK
@@ -99,6 +100,7 @@ void EEPROM_ReadSequential(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t reg_a
 	    size,
 	    HAL_MAX_DELAY
 	);
+    HAL_Delay(5); // Read cycle delay
 
 	if (status == HAL_OK) {
 		// Poll device readiness until it responds with an ACK
@@ -134,6 +136,7 @@ HAL_StatusTypeDef EEPROM_ReadMessage(I2C_HandleTypeDef *hi2c, uint8_t block, uin
 			1,                     // 1 Byte
 			HAL_MAX_DELAY
 		);
+        HAL_Delay(5); // Read cycle delay
 
         if (status != HAL_OK || buffer[i] == '\0' || (uint8_t)buffer[i] == 0xFF) {
 			break;
