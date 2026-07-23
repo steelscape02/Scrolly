@@ -153,16 +153,22 @@ int main(void)
   /* USER CODE BEGIN 2 */
   CharLCD_Init();
   uint32_t scroll_pos = 0;
+    HAL_StatusTypeDef eeprom_status;
   HAL_UART_RegisterCallback(&huart2, HAL_UART_RX_COMPLETE_CB_ID, Handle_UART);
   HAL_UART_Receive_IT(&huart2, &uart2_byte, 1); // put byte from UART2 in "uart2_byte"
-  EEPROM_ReadMessage(&hi2c1, 0, 0, (char*)message, sizeof(message)); // Read the message from EEPROM at startup
+    eeprom_status = EEPROM_ReadMessage(&hi2c1, 0, 0, (char*)message, sizeof(message));
+    if (eeprom_status == HAL_OK && message[0] != '\0') {
+      StartText((char*)message);
+    } else if (eeprom_status != HAL_OK) {
+      char *msg = "EEPROM read failed\r\n";
+      HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+    }
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  //TODO: Handle the motion detected here
 	  if (motion_detected){
 		  LCD_Backlight_On();
 	  }else if(!motion_detected){
@@ -174,12 +180,16 @@ int main(void)
 		  if(strcmp(command, commands[0]) == 0){
 			  StopText();
 			  SplitAndRemove_String((char*)message,(char*)commands[0]);
-			  EEPROM_WritePage(&hi2c1,0,0,(uint8_t*)message,sizeof(message));
+        eeprom_status = EEPROM_WritePage(&hi2c1, 0, 0, message, strlen((char*)message) + 1);
+        if (eeprom_status != HAL_OK) {
+          char *msg = "EEPROM write failed\r\n";
+          HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+        }
 			  StartText((char*)message);
 		  }else if(strcmp(command, commands[1]) ==0){
 			  StopText();
 		  }else{ //Unrecognized command
-			  char* msg = "Unrecognized command\n";
+			  char* msg = "Unrecognized command\n\n";
 			  HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
 		  }
 

@@ -43,13 +43,13 @@ HAL_StatusTypeDef EEPROM_WritePage(I2C_HandleTypeDef *hi2c, uint8_t block, uint8
         return HAL_ERROR;
     }
 
+    // Write data in chunks, until we reach the string length or the end of EEPROM memory
     while (bytes_written < len) {
-        // 1. Calculate current global address and target block
-        uint16_t current_addr = global_address + bytes_written;
+        uint16_t current_addr = global_address + bytes_written; // Calculate the current global address
         uint8_t current_block = (current_addr >> 8) & 0x03; // 0x03 bitmask to prevent malformed inputs
         uint8_t reg_addr = current_addr & 0xFF; // Find the offset in the current block (0-256)
 
-        uint16_t dev_address = (0x50 | current_block) << 1;
+        uint16_t dev_address = (0x50 | current_block) << 1; // Convert to 8-bit address for HAL functions
 
         size_t bytes_to_page_end = 16 - (reg_addr % 16);
 
@@ -108,13 +108,15 @@ void EEPROM_ReadSequential(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t reg_a
 	}
 }
 
-void EEPROM_ReadMessage(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t start_address, char *buffer, size_t buffer_size){
+HAL_StatusTypeDef EEPROM_ReadMessage(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t start_address, char *buffer, size_t buffer_size){
 
     size_t i = 0;
     uint16_t global_address = ((uint16_t)(block & 0x03) << 8) | start_address;
-    if (buffer == NULL || buffer_size == 0) {
-        return;
+    HAL_StatusTypeDef status = HAL_OK;
+    if (hi2c == NULL || buffer == NULL || buffer_size == 0 || block > 3) {
+        return HAL_ERROR;
     }
+    memset(buffer, 0, buffer_size);
 
     for (i = 0; i < buffer_size - 1 && global_address + i < 1024; i++) {
 		uint16_t current_addr = global_address + i;
@@ -123,7 +125,7 @@ void EEPROM_ReadMessage(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t start_ad
 		uint16_t dev_address = (0x50 | current_block) << 1;
 
 		// Read 1 byte at a time
-		HAL_StatusTypeDef status = HAL_I2C_Mem_Read(
+        status = HAL_I2C_Mem_Read(
 			hi2c,
 			dev_address,
 			reg_addr,
@@ -133,11 +135,12 @@ void EEPROM_ReadMessage(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t start_ad
 			HAL_MAX_DELAY
 		);
 
-		if (status != HAL_OK || buffer[i] == '\0') {
+        if (status != HAL_OK || buffer[i] == '\0' || (uint8_t)buffer[i] == 0xFF) {
 			break;
 		}
 	}
 	buffer[i] = '\0'; // Guarantee null-termination
 
+    return status;
 }
 

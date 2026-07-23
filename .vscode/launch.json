@@ -14,6 +14,21 @@
         "C:/openocd/bin/scripts/target/stm32l4x.cfg"
       ],
       "preLaunchTask": "CMake: build"
+    },
+    {
+      "name": "Debug STM32 (ST-LINK)",
+      "type": "cortex-debug",
+      "request": "launch",
+      "servertype": "stlink",
+      "cwd": "${workspaceFolder}",
+      "executable": "${workspaceFolder}/build/Debug/Scrolly.elf", // Path to your compiled ELF file
+      "device": "STM32L476RG",                                  // Change to your target chip model
+      "interface": "swd",
+      "runToEntryPoint": "main",
+      // Point this to your installed ST-LINK GDB Server executable:
+      "serverpath": "C:/ST/STM32CubeIDE_2.1.1/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.stlink-gdb-server.win32_2.2.500.202604010938/tools/bin/ST-LINK_gdbserver.exe",
+      // Point this to the arm-none-eabi-gdb executable:E
+      "gdbPath": "C:/ST/STM32CubeCLT_1.22.0/GNU-tools-for-STM32/bin/arm-none-eabi-gdb.exe"
     }
   ]
 }

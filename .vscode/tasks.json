@@ -1,6 +1,21 @@
 {
     "tasks": [
         {
+            "label": "CMake: build",
+            "type": "process",
+            "command": "C:/Program Files/CMake/bin/cmake.exe",
+            "args": [
+                "--build",
+                "${workspaceFolder}/build/Debug",
+                "--target",
+                "Scrolly"
+            ],
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build"
+        },
+        {
             "type": "cppbuild",
             "label": "C/C++: arm-none-eabi-gcc.exe build active file",
             "command": "C:/Program Files (x86)/Arm GNU Toolchain arm-none-eabi/14.2 rel1/bin/arm-none-eabi-gcc.exe",
