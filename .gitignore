@@ -55,3 +55,6 @@
 .DS_Store
 Thumbs.db
 *~
+
+#templates
+docs/adr/adr_template.md
