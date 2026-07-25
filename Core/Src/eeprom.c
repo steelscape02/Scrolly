@@ -11,7 +11,7 @@
 #include "stdbool.h"
 #include <stdint.h>
 
-void EEPROM_WriteByte(I2C_HandleTypeDef *hi2c1, uint8_t block, uint8_t word_address, uint8_t data) {
+HAL_StatusTypeDef EEPROM_WriteByte(I2C_HandleTypeDef *hi2c1, uint8_t block, uint8_t word_address, uint8_t data) {
     // Base 7-bit address (0x50) shifted left, with block bits packed into bits 1 and 2
     uint16_t dev_address = (0x50 | (block & 0x03)) << 1;
 
@@ -20,8 +20,9 @@ void EEPROM_WriteByte(I2C_HandleTypeDef *hi2c1, uint8_t block, uint8_t word_addr
     payload[1] = data;         // Second byte: Data to store
 
 
-    HAL_I2C_Master_Transmit(hi2c1, dev_address, payload, 2, 100);
+    HAL_StatusTypeDef status = HAL_I2C_Master_Transmit(hi2c1, dev_address, payload, 2, 100);
     HAL_Delay(5); // Write cycle delay
+    return status;
 }
 
 /**
@@ -86,7 +87,7 @@ HAL_StatusTypeDef EEPROM_WritePage(I2C_HandleTypeDef *hi2c, uint8_t block, uint8
     return status;
 }
 
-void EEPROM_ReadSequential(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t reg_addr, uint8_t *buffer, uint16_t size){
+HAL_StatusTypeDef EEPROM_ReadSequential(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t reg_addr, uint8_t *buffer, uint16_t size){
 
 	// Convert starting block and offset into a single linear global address (0 to 1023)
 	uint16_t dev_address = (0x50 | (block & 0x03)) << 1;
@@ -108,6 +109,7 @@ void EEPROM_ReadSequential(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t reg_a
 	}else{
 		//TODO: Handle error
 	}
+    return status;
 }
 
 HAL_StatusTypeDef EEPROM_ReadMessage(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t start_address, char *buffer, size_t buffer_size){

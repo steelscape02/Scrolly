@@ -43,6 +43,7 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/main.c
     Core/Src/eeprom.c
+    Core/Src/charLCD.c
     # Add extra Core/Src/*.c files here as your project grows
 )
 
