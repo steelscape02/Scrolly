@@ -38,8 +38,11 @@
 /* USER CODE BEGIN PD */
 #define LCD_ROWS 2 // Number of rows on the LCD
 #define LCD_COLS 16 // Number of columns on the LCD
-// 1602 message bit numbers
 
+// EEPROM definitions - for V1, this will only have block 0 for the message
+#define MESSAGE_BLOCK 0 // Block 0 of the EEPROM
+#define MESSAGE_START_ADDRESS 0 // Start address of the message in EEPROM
+#define MESSAGE_MAX_LENGTH 256 // Size of the one allocated block in EEPROM for messages
 
 #define RING_BUFFER_SIZE 1024
 #define MAX_LEN 256
@@ -74,6 +77,7 @@ uint8_t buffer_position = 0; // how many bytes received so far in message
 static char commands[2][30]= {"ADD", "ERASE"};
 char command[30] = "";
 
+// TODO: Implement a ring buffer for UART data
 uint8_t ringBuffer[RING_BUFFER_SIZE];
 volatile int head = 0, tail=0;
 /* USER CODE END PV */
@@ -86,7 +90,6 @@ static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
 void Handle_UART(UART_HandleTypeDef *huart);
 char* FindCommand(char *buffer, char *str);
-void ExecuteCommand(char* command);
 bool StartsWith(const char *str, const char *prefix);
 void SplitAndRemove_String(char *str,char *sub);
 
@@ -138,14 +141,24 @@ int main(void)
   uint32_t scroll_pos = 0;
     HAL_StatusTypeDef eeprom_status;
   HAL_UART_RegisterCallback(&huart2, HAL_UART_RX_COMPLETE_CB_ID, Handle_UART);
+
   HAL_UART_Receive_IT(&huart2, &uart2_byte, 1); // put byte from UART2 in "uart2_byte"
-    eeprom_status = EEPROM_ReadMessage(&hi2c1, 0, 0, (char*)message, sizeof(message));
-    if (eeprom_status == HAL_OK && message[0] != '\0') {
-      StartText(&display, rotatingMessage, (const char*)message, MAX_LEN);
-    } else if (eeprom_status != HAL_OK) {
-      char *msg = "EEPROM read failed\r\n";
-      HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
-    }
+
+  eeprom_status = EEPROM_ReadMessage(
+    &hi2c1,
+    MESSAGE_BLOCK,
+    MESSAGE_START_ADDRESS,
+    (char*)message,
+    sizeof(message)
+  );
+
+  if (eeprom_status == HAL_OK && message[0] != '\0') {
+    StartText(&display, rotatingMessage, (const char*)message, MAX_LEN);
+
+  } else if (eeprom_status != HAL_OK) {
+    char *msg = "EEPROM read failed\r\n";
+    HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+  }
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -153,31 +166,48 @@ int main(void)
   while (1)
   {
 	  if (motion_detected != backlight_state) {
+
 		  if (motion_detected) {
 			  LCD_Backlight_On(&hi2c1, I2C_ADDR);
+
 		  } else {
 			  LCD_Backlight_Off(&hi2c1, I2C_ADDR);
 		  }
 		  backlight_state = motion_detected;
 	  }
+
 	  if (new_message_ready) {
 		  new_message_ready = false;
 		  FindCommand(command, (char*)message);
+
 		  if(strcmp(command, commands[0]) == 0){
 			  StopText(&display, &hi2c1, I2C_ADDR);
 			  SplitAndRemove_String((char*)message,(char*)commands[0]);
-        eeprom_status = EEPROM_WritePage(&hi2c1, 0, 0, message, strlen((char*)message) + 1);
-        if (eeprom_status != HAL_OK) {
-          char *msg = "EEPROM write failed\r\n";
-          HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
-        }
+
+        eeprom_status = EEPROM_WritePage(
+          &hi2c1,
+          MESSAGE_BLOCK,
+          MESSAGE_START_ADDRESS,
+          message,
+          strlen((char*)message) + 1
+        );
 			  StartText(&display, rotatingMessage, (const char*)message, MAX_LEN);
 		  }else if(strcmp(command, commands[1]) ==0){
+
+        // Erase the block in EEPROM and clear the rotating message
+        eeprom_status = EEPROM_EraseBlock(&hi2c1, MESSAGE_BLOCK);
+        memset(rotatingMessage, 0, sizeof(rotatingMessage));
 			  StopText(&display, &hi2c1, I2C_ADDR);
+        
 		  }else{ //Unrecognized command
 			  char* msg = "Unrecognized command\n\n";
 			  HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
 		  }
+
+      if (eeprom_status != HAL_OK) {
+        char *msg = "EEPROM write failed\r\n";
+        HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+      }
 
 		  memset(message, 0, sizeof(message));
 		  buffer_position = 0;
@@ -414,15 +444,6 @@ char* FindCommand(char *buffer, char *str){
 	}
 	strcpy(buffer, NO_COMMAND);
 	return buffer;
-}
-
-void ExecuteCommand(char *command){
-	if (strcmp(command, commands[0]) == 0){ //ADD
-
-	}
-	else if (strcmp(command, (char*)commands[1]) == 0){ //TODO: Fix this stupid thing
-		//CharLCD_Clear();
-	}
 }
 
 bool StartsWith(const char *str, const char *prefix) {

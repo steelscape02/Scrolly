@@ -12,6 +12,7 @@
 #include "stdbool.h"
 #include <stdint.h>
 
+// 1602 message bit numbers
 #define DC_BIT 0 // Data/Command bit (register select bit)
 #define EN_BIT 2 // Enable bit
 #define BL_BIT 3 // Backlight bit
