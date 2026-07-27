@@ -77,9 +77,6 @@ uint8_t buffer_position = 0; // how many bytes received so far in message
 static char commands[2][30]= {"ADD", "ERASE"};
 char command[30] = "";
 
-// TODO: Implement a ring buffer for UART data
-uint8_t ringBuffer[RING_BUFFER_SIZE];
-volatile int head = 0, tail=0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -166,15 +163,18 @@ int main(void)
   while (1)
   {
 	  if (motion_detected != backlight_state) {
-
 		  if (motion_detected) {
 			  LCD_Backlight_On(&hi2c1, I2C_ADDR);
-
+			  backlight_state = motion_detected;
 		  } else {
 			  LCD_Backlight_Off(&hi2c1, I2C_ADDR);
+        CharLCD_Clear(&hi2c1, I2C_ADDR); // Clear the display
+        backlight_state = motion_detected;
+        continue;
 		  }
-		  backlight_state = motion_detected;
-	  }
+	  }else if(!motion_detected){
+      continue;
+    }
 
 	  if (new_message_ready) {
 		  new_message_ready = false;
@@ -198,7 +198,7 @@ int main(void)
         eeprom_status = EEPROM_EraseBlock(&hi2c1, MESSAGE_BLOCK);
         memset(rotatingMessage, 0, sizeof(rotatingMessage));
 			  StopText(&display, &hi2c1, I2C_ADDR);
-        
+        CharLCD_Clear(&hi2c1, I2C_ADDR);
 		  }else{ //Unrecognized command
 			  char* msg = "Unrecognized command\n\n";
 			  HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
@@ -446,6 +446,12 @@ char* FindCommand(char *buffer, char *str){
 	return buffer;
 }
 
+/**
+ * @brief Checks if a string starts with a given prefix.
+ * @param str The string to check.
+ * @param prefix The prefix to look for.
+ * @return true if the string starts with the prefix, false otherwise.
+ */
 bool StartsWith(const char *str, const char *prefix) {
     size_t len_pre = strlen(prefix);
     size_t len_str = strlen(str);
