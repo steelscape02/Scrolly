@@ -214,8 +214,7 @@ int main(void)
 		  scroll_pos=0;
 	  }
 	  if(display){
-		  if(strlen(rotatingMessage) < LCD_COLS){ //if it doesn't need to scroll, don't
-			  //TODO Add flag to not redraw this more than once
+		  if(strlen(rotatingMessage) <= LCD_COLS+2){ //Add 2 spaces to account for the spaces added to the message
 			  CharLCD_Set_Cursor(&hi2c1, 0, 0, I2C_ADDR);
 			  CharLCD_Write_String(&hi2c1, I2C_ADDR, rotatingMessage);
 		  }else{
