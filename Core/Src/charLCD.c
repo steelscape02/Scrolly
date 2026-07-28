@@ -24,6 +24,13 @@
 static uint8_t lcd_port_state = 0x00;
 static bool lcd_backlight_enabled = false;
 
+/**
+ * @brief Write a byte to the LCD via I2C
+ * @param hi2c1: Pointer to I2C handle (e.g., &hi2c1)
+ * @param I2C_ADDR: I2C address of the LCD
+ * @param data: 8-bit data to send to the LCD
+ * @retval None
+ */
 static void CharLCD_Write_Port(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, uint8_t data) {
 	HAL_I2C_Master_Transmit(hi2c1, I2C_ADDR << 1, &data, 1, 100);
 }
@@ -127,18 +134,40 @@ void CharLCD_Write_Nibble(I2C_HandleTypeDef *hi2c1, uint8_t nibble, uint8_t dc, 
 	CharLCD_Write_Port(hi2c1, I2C_ADDR, lcd_port_state); // Send data with EN low
 }
 
+/**
+ * @brief Write a string to the LCD at the current cursor position
+ * @param hi2c1: Pointer to I2C handle (e.g., &hi2c1)
+ * @param I2C_ADDR: I2C address of the LCD
+ * @param str: Null-terminated string to display
+ * @retval None
+ */
 void CharLCD_Write_String(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, char str[]){
 	for (int i = 0; str[i] != '\0'; i++) {
 		CharLCD_Send_Data(hi2c1, str[i], false, I2C_ADDR);
 	}
 }
 
+/**
+ * @brief Write a string to the LCD at the current cursor position
+ * @param display: Pointer to a boolean indicating if the display is active
+ * @param rotatingMessage: Buffer to hold the message to display
+ * @param new_str: New string to display
+ * @param MAX_LEN: Maximum length of the message buffer
+ * @retval None
+ */
 void StartText(bool *display, char rotatingMessage[], const char *new_str, uint16_t MAX_LEN){
 	*display = true;
 	strncpy(rotatingMessage, new_str, MAX_LEN-1);
 	//TODO: Add support for multiple strings? AFTER minimum ver release
 }
 
+/**
+ * @brief Stop displaying text on the LCD and clear the display
+ * @param display: Pointer to a boolean indicating if the display is active
+ * @param hi2c1: Pointer to I2C handle (e.g., &hi2c1)
+ * @param I2C_ADDR: I2C address of the LCD
+ * @retval None
+ */
 void StopText(bool *display, I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR){
 	*display = false;
 	CharLCD_Clear(hi2c1, I2C_ADDR);
@@ -146,6 +175,12 @@ void StopText(bool *display, I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR){
 
 /**
  * @brief Write a frame to the screen
+ * @param hi2c1: Pointer to I2C handle (e.g., &hi2c1)
+ * @param I2C_ADDR: I2C address of the LCD
+ * @param LCD_COLS: Number of columns on the LCD
+ * @param scroll_pos: Current scroll position in the message
+ * @param message: The message to display
+ * @retval None
  */
 void ShowFrame(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, uint16_t LCD_COLS, int scroll_pos, char message[]){
     static uint32_t pos = 0;
@@ -157,6 +192,12 @@ void ShowFrame(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, uint16_t LCD_COLS, in
 	}
 }
 
+/**
+ * @brief Turn on the LCD backlight
+ * @param hi2c1: Pointer to I2C handle (e.g., &hi2c1)
+ * @param I2C_ADDR: I2C address of the LCD
+ * @retval None
+ */
 void LCD_Backlight_On(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR)
 {
     lcd_backlight_enabled = true;
@@ -164,6 +205,12 @@ void LCD_Backlight_On(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR)
     CharLCD_Write_Port(hi2c1, I2C_ADDR, lcd_port_state);
 }
 
+/**
+ * @brief Turn off the LCD backlight
+ * @param hi2c1: Pointer to I2C handle (e.g., &hi2c1)
+ * @param I2C_ADDR: I2C address of the LCD
+ * @retval None
+ */
 void LCD_Backlight_Off(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR)
 {
     lcd_backlight_enabled = false;

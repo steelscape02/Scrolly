@@ -17,6 +17,14 @@
 #define EEPROM_TOTAL_SIZE 1024 // Total size in bytes for 24LC08B (8Kbit = 1024 bytes)
 #define EEPROM_BLOCK_SIZE 256 // Size of each block in bytes (4 blocks of 256 bytes each)
 
+/**
+ * @brief Writes a single byte to the 24LC08B EEPROM.
+ * @param hi2c1: Pointer to I2C handle (e.g., &hi2c1)
+ * @param block: Block index (0 to 3)
+ * @param word_address: Internal address within the block (0 to 255)
+ * @param data: Byte of data to write
+ * @return HAL_StatusTypeDef indicating success or failure
+ */
 HAL_StatusTypeDef EEPROM_WriteByte(I2C_HandleTypeDef *hi2c1, uint8_t block, uint8_t word_address, uint8_t data) {
     // Base 7-bit address (0x50) shifted left, with block bits packed into bits 1 and 2
     uint16_t dev_address = (EEPROM_I2C_ADDRESS | (block & 0x03)) << 1;
@@ -120,6 +128,12 @@ HAL_StatusTypeDef EEPROM_WritePage(I2C_HandleTypeDef *hi2c, uint8_t block, uint8
     return status;
 }
 
+/**
+ * @brief Erases a block in the EEPROM by writing 0xFF to all bytes in that block.
+ * @param hi2c: Pointer to I2C handle (e.g., &hi2c1)
+ * @param block: Block index to erase (0 to 3)
+ * @return HAL_StatusTypeDef indicating success or failure
+ */
 HAL_StatusTypeDef EEPROM_EraseBlock(I2C_HandleTypeDef *hi2c, uint8_t block) {
     uint8_t erase_data[EEPROM_BLOCK_SIZE];
     memset(erase_data, 0xFF, sizeof(erase_data)); // Fill with 0xFF
@@ -127,6 +141,15 @@ HAL_StatusTypeDef EEPROM_EraseBlock(I2C_HandleTypeDef *hi2c, uint8_t block) {
     return EEPROM_WritePage(hi2c, block, 0, erase_data, EEPROM_BLOCK_SIZE);
 }
 
+/**
+ * @brief Reads a sequence of bytes from the EEPROM.
+ * @param hi2c: Pointer to I2C handle (e.g., &hi2c1)
+ * @param block: Block index to read from (0 to 3)
+ * @param reg_addr: Starting address within the block (0 to 255)
+ * @param buffer: Pointer to buffer where read data will be stored
+ * @param size: Number of bytes to read
+ * @return HAL_StatusTypeDef indicating success or failure
+ */
 HAL_StatusTypeDef EEPROM_ReadSequential(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t reg_addr, uint8_t *buffer, uint16_t size){
 
 	// Convert starting block and offset into a single linear global address (0 to 1023)

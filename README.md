@@ -7,7 +7,7 @@ Scrolly can be programmed over UART, and uses an I2C bus to handle both the disp
 
 ## How to use
 
-Scrolly is designed to be simple to use. However, at this stage of development programming is only available over UART. TO perform this program, follow the steps below:
+Scrolly is designed to be simple to use. However, at this stage of development programming is only available over UART. To program the display at this stage, follow the steps below:
 
 ### Setup communication
 

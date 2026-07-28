@@ -418,6 +418,10 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+/**
+ * @brief Handles UART reception and processes incoming bytes.
+ * @param huart Pointer to the UART handle struct.
+ */
 void Handle_UART(UART_HandleTypeDef *huart){
 	if (huart->Instance != USART2) return;
 
@@ -434,6 +438,12 @@ void Handle_UART(UART_HandleTypeDef *huart){
 	HAL_UART_Receive_IT(&huart2, &uart2_byte, 1);
 }
 
+/**
+ * @brief Finds a command in a given string and copies it to a buffer.
+ * @param buffer The buffer to copy the found command into.
+ * @param str The string to search for commands.
+ * @return A pointer to the buffer containing the found command or NO_COMMAND if not found.
+ */
 char* FindCommand(char *buffer, char *str){
 	for(int i=0; i<2; i++){
 		if(StartsWith(str,commands[i])){
@@ -464,6 +474,11 @@ bool StartsWith(const char *str, const char *prefix) {
     return strncmp(str, prefix, len_pre) == 0;
 }
 
+/**
+ * @brief Splits a string and removes a specified substring from it.
+ * @param str The original string to modify.
+ * @param sub The substring to remove from the original string.
+ */
 void SplitAndRemove_String(char *str, char *sub) {
     char new_sub[32];
     snprintf(new_sub, sizeof(new_sub), "%s ", sub);
@@ -475,7 +490,10 @@ void SplitAndRemove_String(char *str, char *sub) {
     }
 }
 
-
+/**
+ * @brief Callback function for GPIO external interrupts.
+ * @param GPIO_Pin The pin that triggered the interrupt.
+ */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	if(GPIO_Pin == MOTION_SENS_Pin){
 		if(HAL_GPIO_ReadPin(MOTION_SENS_GPIO_Port, MOTION_SENS_Pin) == GPIO_PIN_SET){
