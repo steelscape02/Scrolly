@@ -5,8 +5,8 @@
 #include "stdbool.h"
 #include "string.h"
 
-void add(char *message, size_t size);
-void rem(void);
-void clr(void);
+void add(I2C_HandleTypeDef *hi2c1, char *message, size_t size);
+void rem(I2C_HandleTypeDef *hi2c1);
+void clr(I2C_HandleTypeDef *hi2c1);
 
 #endif /* INC_APP_COMM_H_ */

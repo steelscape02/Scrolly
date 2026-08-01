@@ -4,6 +4,7 @@ This file contains the implementation of the communication functions for the app
 */
 
 #include "app_comm.h"
+#include "drv_eeprom24xx08.h"
 #include "string.h"
 
 #define MAX_STRING_LENGTH 128
@@ -12,7 +13,13 @@ This file contains the implementation of the communication functions for the app
 char strings[MAX_STRINGS][MAX_STRING_LENGTH];
 uint8_t current_pos = 0;
 
-void add(char *message, size_t size) {
+/**
+ * @brief Add a string to the existing `strings` list
+ * @param hi2c1 Pointer to I2C handle (e.g., &hi2c1)
+ * @param message The message to be added
+ * @param size The length of the message to be added
+ */
+void add(I2C_HandleTypeDef *hi2c1, char *message, size_t size) {
 
     if (size < MAX_STRING_LENGTH - 1){
 
@@ -22,5 +29,23 @@ void add(char *message, size_t size) {
             strings[current_pos][MAX_STRING_LENGTH - 1] = '\0'; // Ensure null-termination
             current_pos++;
         }
+    }
+}
+
+/**
+ * @brief Add a string to the existing <c>strings</c> list
+ * @param hi2c1 Pointer to I2C handle (e.g., &hi2c1)
+ */
+void rem(I2C_HandleTypeDef *hi2c1){
+
+    if(current_pos < MAX_STRINGS+1){
+        strings[--current_pos] = '\0'; // Erase the string
+    }
+}
+
+void clr(I2C_HandleTypeDef *hi2c1){
+
+    for (int i=0; i<MAX_STRINGS, i++){
+        strings[i] = '\0';
     }
 }
