@@ -17,7 +17,9 @@ Moreover, this approach makes it impossible to reserve a part of the EEPROM for 
 
 ## Decision
 
-The EEPROM can store 8 kBits of data which equates to 1,024 bytes or chars. This is far more than is necessary for a quote, so I think it reasonable to restrict the user to **1 block, or 256 bytes/chars, of space**. Considering the nature of a scrolling display this seems like far more than enough.
+The EEPROM can store 8 kBits of data which equates to 1,024 bytes or chars. This is far more than is necessary for a quote, so I think it reasonable to restrict the user to **1/2 block, or 128 bytes/chars, of space**. Considering the nature of a scrolling display this seems like far more than enough.
+
+Please see 0002 for the plan to store multiple strings.
 
 This length also allows the microcontroller to efficiently wipe that one block when new data is inserted, or when the user sends an ERASE command.
 

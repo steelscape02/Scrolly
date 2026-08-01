@@ -3,9 +3,10 @@
 
 #include "main.h"
 #include "stdbool.h"
+#include "string.h"
 
-void process_command(uint8_t *command, uint16_t length);
-
-
+void add(char *message, size_t size);
+void rem(void);
+void clr(void);
 
 #endif /* INC_APP_COMM_H_ */
