@@ -1,12 +1,12 @@
 /*
- * eeprom.h
+ * drv_eeprom24xx08.h
  *
  *  Created on: Jul 18, 2026
  *      Author: nicho
  */
 
-#ifndef INC_EEPROM_H_
-#define INC_EEPROM_H_
+#ifndef INC_DRV_EEPROM24XX08_H_
+#define INC_DRV_EEPROM24XX08_H_
 
 #include "main.h"
 
@@ -17,4 +17,4 @@ void EEPROM_ReadRandom();
 HAL_StatusTypeDef EEPROM_ReadSequential(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t reg_addr, uint8_t *buffer, uint16_t size);
 HAL_StatusTypeDef EEPROM_ReadMessage(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t start_address, char *buffer, size_t buffer_size);
 
-#endif /* INC_EEPROM_H_ */
+#endif /* INC_DRV_EEPROM24XX08_H_ */

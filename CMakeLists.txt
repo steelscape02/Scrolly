@@ -42,8 +42,9 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/main.c
-    Core/Src/eeprom.c
-    Core/Src/charLCD.c
+    Core/Src/drv_i2clcd.c
+    Core/Src/drv_eeprom24xx08.c
+    Core/Src/app_comm.c
     # Add extra Core/Src/*.c files here as your project grows
 )
 

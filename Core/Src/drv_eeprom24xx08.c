@@ -1,11 +1,11 @@
 /*
- * eeprom.c
+ * drv_eeprom24xx08.c
  * Support for 24LC08B EEPROM
  *
  *  Created on: Jul 18, 2026
  *      Author: nicho
  */
-#include "eeprom.h"
+#include "drv_eeprom24xx08.h"
 #include "stdbool.h"
 #include "string.h"
 #include "stdio.h"

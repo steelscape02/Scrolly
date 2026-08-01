@@ -1,5 +1,5 @@
-#ifndef INC_CHARLCD_H_
-#define INC_CHARLCD_H_
+#ifndef INC_DRV_I2CLCD_H_
+#define INC_DRV_I2CLCD_H_
 
 #include "main.h"
 #include "stdbool.h"
@@ -18,4 +18,4 @@ void ShowFrame(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, uint16_t LCD_COLS, in
 void LCD_Backlight_On(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR);
 void LCD_Backlight_Off(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR);
 
-#endif /* INC_CHARLCD_H_ */
+#endif /* INC_DRV_I2CLCD_H_ */

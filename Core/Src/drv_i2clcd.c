@@ -1,11 +1,11 @@
 /*
- * display.c
+ * drv_i2clcd.c
  *
  *  Created on: Jul 18, 2026
  *      Author: nicho
  */
 
-#include "charLCD.h"
+#include "drv_i2clcd.h"
 #include "stdbool.h"
 #include "string.h"
 #include "stdio.h"
