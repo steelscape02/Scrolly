@@ -33,19 +33,24 @@ void add(I2C_HandleTypeDef *hi2c1, char *message, size_t size) {
 }
 
 /**
- * @brief Add a string to the existing <c>strings</c> list
+ * @brief Remove the last string in the list
  * @param hi2c1 Pointer to I2C handle (e.g., &hi2c1)
  */
 void rem(I2C_HandleTypeDef *hi2c1){
 
-    if(current_pos < MAX_STRINGS+1){
-        strings[--current_pos] = '\0'; // Erase the string
+    if (current_pos > 0 && current_pos <= MAX_STRINGS) {
+        --current_pos;
+        memset(strings[current_pos], 0, sizeof(strings[current_pos]));
     }
 }
 
+/**
+ * @brief Remove all strings in the list
+ * @param hi2c1 Pointer to I2C handle (e.g., &hi2c1)
+ */
 void clr(I2C_HandleTypeDef *hi2c1){
 
-    for (int i=0; i<MAX_STRINGS, i++){
-        strings[i] = '\0';
+    for (int i=0; i<MAX_STRINGS; i++){
+        memset(strings[i], 0, sizeof(strings[i]));
     }
 }
