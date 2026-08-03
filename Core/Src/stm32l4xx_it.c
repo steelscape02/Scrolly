@@ -22,6 +22,7 @@
 #include "stm32l4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "app_comm.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -199,6 +200,20 @@ void SysTick_Handler(void)
 /* For the available peripheral interrupt handler names,                      */
 /* please refer to the startup file (startup_stm32l4xx.s).                    */
 /******************************************************************************/
+
+/**
+  * @brief This function handles PVD/PVM1/PVM2/PVM3/PVM4 interrupts through EXTI lines 16/35/36/37/38.
+  */
+void PVD_PVM_IRQHandler(void)
+{
+  /* USER CODE BEGIN PVD_PVM_IRQn 0 */
+  //TODO: Call app_com mod to write to EEPROM
+  /* USER CODE END PVD_PVM_IRQn 0 */
+  HAL_PWREx_PVD_PVM_IRQHandler();
+  /* USER CODE BEGIN PVD_PVM_IRQn 1 */
+
+  /* USER CODE END PVD_PVM_IRQn 1 */
+}
 
 /**
   * @brief This function handles EXTI line0 interrupt.

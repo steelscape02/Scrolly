@@ -19,7 +19,7 @@ uint8_t current_pos = 0;
  * @param message The message to be added
  * @param size The length of the message to be added
  */
-void add(I2C_HandleTypeDef *hi2c1, char *message, size_t size) {
+void add(char *message, size_t size) {
 
     if (size < MAX_STRING_LENGTH - 1){
 
@@ -36,7 +36,7 @@ void add(I2C_HandleTypeDef *hi2c1, char *message, size_t size) {
  * @brief Remove the last string in the list
  * @param hi2c1 Pointer to I2C handle (e.g., &hi2c1)
  */
-void rem(I2C_HandleTypeDef *hi2c1){
+void rem(void){
 
     if (current_pos > 0 && current_pos <= MAX_STRINGS) {
         --current_pos;
@@ -48,9 +48,27 @@ void rem(I2C_HandleTypeDef *hi2c1){
  * @brief Remove all strings in the list
  * @param hi2c1 Pointer to I2C handle (e.g., &hi2c1)
  */
-void clr(I2C_HandleTypeDef *hi2c1){
+void clr(void){
 
-    for (int i=0; i<MAX_STRINGS; i++){
+    for (int i=MAX_STRINGS; i>0; i--){
         memset(strings[i], 0, sizeof(strings[i]));
+        current_pos = i;
     }
+}
+
+void writeToEEPROM(I2C_HandleTypeDef *hi2c1){
+
+    for(int i=0; i<MAX_STRINGS; i++){
+        char *str = strings[i];
+        if(strlen(str) > 0){
+            //TODO: Write to EEPROM
+        }
+    }
+    // eeprom_status = EEPROM_WritePage(
+    //       &hi2c1,
+    //       MESSAGE_BLOCK,
+    //       MESSAGE_START_ADDRESS,
+    //       message,
+    //       strlen((char*)message) + 1
+    //     );
 }
