@@ -182,7 +182,7 @@ HAL_StatusTypeDef EEPROM_ReadSequential(I2C_HandleTypeDef *hi2c, uint8_t block, 
  * @param start_address: Starting address within the block
  * @param buffer: Buffer to store the read message
  * @param buffer_size: Size of the buffer
- * @return: HAL_StatusTypeDef
+ * @return HAL_StatusTypeDef indicating success or failure
  */
 HAL_StatusTypeDef EEPROM_ReadMessage(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t start_address, char *buffer, size_t buffer_size){
 

@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include "drv_eeprom24xx08.h"
 #include "drv_i2clcd.h"
+#include "app_comm.h"
 
 #include "stdbool.h"
 #include "string.h"
@@ -66,6 +67,7 @@ DMA_HandleTypeDef hdma_usart3_rx;
 
 /* USER CODE BEGIN PV */
 static bool display = false;
+static bool scroll = false;
 static bool new_message_ready = false;
 static bool motion_detected;
 static bool backlight_state = false;
@@ -148,6 +150,16 @@ int main(void)
 
   HAL_UART_Receive_IT(&huart2, &uart2_byte, 1); // put byte from UART2 in "uart2_byte"
 
+  PWR_PVDTypeDef sConfigPVD = {0};
+  __HAL_RCC_PWR_CLK_ENABLE();
+
+  sConfigPVD.PVDLevel = PWR_PVDLEVEL_3;
+  sConfigPVD.Mode = PWR_MODE_IT_RISING_FALLING;
+  HAL_PWR_PVDConfig(&sConfigPVD);
+
+  HAL_PWR_EnablePVD();
+
+  // TODO: Add initialize function here to read all strings into app_comm
   eeprom_status = EEPROM_ReadMessage(
     &hi2c1,
     MESSAGE_BLOCK,
@@ -187,25 +199,11 @@ int main(void)
 		  new_message_ready = false;
 		  FindCommand(command, (char*)message);
 
+      // TODO: Add the appropriate commands
 		  if(strcmp(command, commands[0]) == 0){
-			  StopText(&display, &hi2c1, I2C_ADDR);
-			  SplitAndRemove_String((char*)message,(char*)commands[0]);
 
-        eeprom_status = EEPROM_WritePage(
-          &hi2c1,
-          MESSAGE_BLOCK,
-          MESSAGE_START_ADDRESS,
-          message,
-          strlen((char*)message) + 1
-        );
-			  StartText(&display, rotatingMessage, (const char*)message, MAX_LEN);
 		  }else if(strcmp(command, commands[1]) ==0){
 
-        // Erase the block in EEPROM and clear the rotating message
-        eeprom_status = EEPROM_EraseBlock(&hi2c1, MESSAGE_BLOCK);
-        memset(rotatingMessage, 0, sizeof(rotatingMessage));
-			  StopText(&display, &hi2c1, I2C_ADDR);
-        CharLCD_Clear(&hi2c1, I2C_ADDR);
 		  }else{ //Unrecognized command
 			  char* msg = "Unrecognized command\n\n";
 			  HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
@@ -216,22 +214,27 @@ int main(void)
         HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
       }
 
+      // TODO: Add message length check
+      // Something like: app_comm NeedsScroll with bool retval
+
 		  memset(message, 0, sizeof(message));
 		  buffer_position = 0;
 		  scroll_pos=0;
 	  }
 	  if(display){
-		  if(strlen(rotatingMessage) <= LCD_COLS+2){ //Add 2 spaces to account for the spaces added to the message
-			  CharLCD_Set_Cursor(&hi2c1, 0, 0, I2C_ADDR);
-			  CharLCD_Write_String(&hi2c1, I2C_ADDR, rotatingMessage);
-		  }else{
-			  ShowFrame(&hi2c1, I2C_ADDR, LCD_COLS, scroll_pos, rotatingMessage);
-			  if(scroll_pos < strlen(rotatingMessage)){
+		  if(scroll){ // Check scroll value
+        ShowFrame(&hi2c1, I2C_ADDR, LCD_COLS, scroll_pos, rotatingMessage);
+        if(scroll_pos < strlen(rotatingMessage)){
 				  scroll_pos++;
 			  }else{
 				  scroll_pos = 0;
 			  }
 			  HAL_Delay(500);
+			  
+		  }else{
+        display = false; //don't reiterate this code until a new message is set, which will set display
+			  CharLCD_Set_Cursor(&hi2c1, 0, 0, I2C_ADDR);
+			  CharLCD_Write_String(&hi2c1, I2C_ADDR, rotatingMessage);
 		  }
 	  }
 
@@ -560,6 +563,13 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 			motion_detected = false;
 		}
 	}
+}
+
+/**
+ * @brief Callack function for Power Voltage Detection (PVD) interrupts. Triggers when voltage drops below 2.9V
+ */
+void HAL_PWR_PVDCallback(void){
+  //writeToEEPROM();
 }
 
 

@@ -147,6 +147,15 @@ void CharLCD_Write_String(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, char str[]
 	}
 }
 
+void CharLCD_WriteNoScroll(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, char message){
+	CharLCD_Set_Cursor(&hi2c1, 0, 0, I2C_ADDR);
+    CharLCD_Write_String(&hi2c1, I2C_ADDR, rotatingMessage);
+}
+
+void CharLCD_WriteScrolling(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, uint32_t scroll_pos, char message){
+	ShowFrame(&hi2c1, I2C_ADDR, LCD_COLS, scroll_pos, rotatingMessage);
+}
+
 /**
  * @brief Write a string to the LCD at the current cursor position
  * @param display: Pointer to a boolean indicating if the display is active
