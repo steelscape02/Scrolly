@@ -147,13 +147,13 @@ void CharLCD_Write_String(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, char str[]
 	}
 }
 
-void CharLCD_WriteNoScroll(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, char message){
-	CharLCD_Set_Cursor(&hi2c1, 0, 0, I2C_ADDR);
-    CharLCD_Write_String(&hi2c1, I2C_ADDR, rotatingMessage);
+void CharLCD_WriteNoScroll(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, char* message){
+	CharLCD_Set_Cursor(hi2c1, 0, 0, I2C_ADDR);
+    CharLCD_Write_String(hi2c1, I2C_ADDR, message);
 }
 
-void CharLCD_WriteScrolling(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, uint32_t scroll_pos, char message){
-	ShowFrame(&hi2c1, I2C_ADDR, LCD_COLS, scroll_pos, rotatingMessage);
+void CharLCD_WriteScrolling(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, uint16_t LCD_COLS, uint32_t scroll_pos, char* message){
+	ShowFrame(hi2c1, I2C_ADDR, LCD_COLS, scroll_pos, message);
 }
 
 /**
@@ -168,7 +168,7 @@ void StartText(bool *display, char rotatingMessage[], const char *new_str, uint1
 	*display = true;
 	strncpy(rotatingMessage, new_str, MAX_LEN-1);
 	//TODO: Add support for multiple strings? AFTER minimum ver release
-}
+}		
 
 /**
  * @brief Stop displaying text on the LCD and clear the display

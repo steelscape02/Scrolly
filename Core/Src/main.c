@@ -192,19 +192,18 @@ int main(void)
         continue;
 		  }
 	  }else if(!motion_detected){
-      continue;
+     continue;
     }
 
 	  if (new_message_ready) {
 		  new_message_ready = false;
-		  FindCommand(command, (char*)message);
-
-      // TODO: Add the appropriate commands
-		  if(strcmp(command, commands[0]) == 0){
-
-		  }else if(strcmp(command, commands[1]) ==0){
-
-		  }else{ //Unrecognized command
+      if (strstr("add", message) != NULL) {
+        add((char*)message,sizeof((char*)message));
+      } else if (strstr("rem", message) != NULL){
+        rem();
+      } else if (strstr("clr", message) != NULL){
+        clr();
+      } else { //Unrecognized command
 			  char* msg = "Unrecognized command\n\n";
 			  HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
 		  }
@@ -497,42 +496,6 @@ void Handle_UART(UART_HandleTypeDef *huart){
 		new_message_ready = true;   // just flag it
 	}
 	HAL_UART_Receive_IT(&huart2, &uart2_byte, 1);
-}
-
-/**
- * @brief Finds a command in a given string and copies it to a buffer.
- * @param buffer The buffer to copy the found command into.
- * @param str The string to search for commands.
- * @return A pointer to the buffer containing the found command or NO_COMMAND if not found.
- */
-char* FindCommand(char *buffer, char *str){
-	for(int i=0; i<2; i++){
-		if(StartsWith(str,commands[i])){
-			strcpy(buffer, commands[i]);
-			return buffer;
-		}
-	}
-	strcpy(buffer, NO_COMMAND);
-	return buffer;
-}
-
-/**
- * @brief Checks if a string starts with a given prefix.
- * @param str The string to check.
- * @param prefix The prefix to look for.
- * @return true if the string starts with the prefix, false otherwise.
- */
-bool StartsWith(const char *str, const char *prefix) {
-    size_t len_pre = strlen(prefix);
-    size_t len_str = strlen(str);
-
-    // If the prefix is longer than the string itself, it can't be a prefix
-    if (len_pre > len_str) {
-        return false;
-    }
-
-    // Compare only up to the length of the prefix
-    return strncmp(str, prefix, len_pre) == 0;
 }
 
 /**

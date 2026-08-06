@@ -1,7 +1,8 @@
 /**
-app_comm.c
-This file contains the implementation of the communication functions for the application.
-*/
+ * @file app_comm.c
+ * @brief App Communication Module
+ * This file contains the implementation of the communication functions for the application.
+ */
 
 #include "app_comm.h"
 #include "drv_eeprom24xx08.h"
@@ -16,7 +17,7 @@ This file contains the implementation of the communication functions for the app
 #define MESSAGE_START_ADDRESS 0 // Start address of the message in EEPROM
 
 uint8_t strings[MAX_STRINGS][MAX_STRING_LENGTH];
-uint8_t message[MAX_MESSAGE_LENGTH] = {0};
+uint8_t printMessage[MAX_MESSAGE_LENGTH] = {0};
 uint8_t current_pos = 0;
 uint8_t scroll_pos = 0;
 
@@ -25,13 +26,13 @@ uint8_t scroll_pos = 0;
  * @param message The message to be added
  * @param size The length of the message to be added
  */
-void add(char *message, size_t size) {
+void add(char *str, size_t size) {
 
     if (size < MAX_STRING_LENGTH - 1){
 
         if (current_pos < MAX_STRINGS) {
 
-            strncpy((char*)strings[current_pos], message, MAX_STRING_LENGTH - 1);
+            strncpy((char*)strings[current_pos], str, MAX_STRING_LENGTH - 1);
             strings[current_pos][MAX_STRING_LENGTH - 1] = '\0'; // Ensure null-termination
             current_pos++;
         }
@@ -63,7 +64,7 @@ void clr(void){
 /**
  * @brief Build message with the current contents of `strings`. Allows `writeScrolling` to be executed immediately after
  */
-void buildMessage(char message){
+void buildMessage(char str){
     // TODO: #7 Iterate through strings array and build a message string, then write to I2C with WriteScrolling
 }
 
@@ -71,15 +72,15 @@ void buildMessage(char message){
  * @brief Write a message without scrolling to the LCD. Expects message to have already been built with `buildMessage`
  */
 void writeNoScroll(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR){
-    CharLCD_WriteNoScroll(hi2c1, I2C_ADDR, message);
+    CharLCD_WriteNoScroll(hi2c1, I2C_ADDR, (char*)printMessage);
 }
 
 /**
  * @brief Displays the `message` `char`
  */
-void writeScrolling(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR){
-    CharLCD_WriteScrolling(hi2c1, I2C_ADDR, scroll_pos, message);
-    if(scroll_pos < strlen(rotatingMessage)){
+void writeScrolling(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, uint8_t LCD_COLS){
+    CharLCD_WriteScrolling(hi2c1, I2C_ADDR, LCD_COLS, scroll_pos, (char*)printMessage);
+    if(scroll_pos < strlen((char*)printMessage)){
         scroll_pos++;
     }else{
         scroll_pos = 0;
