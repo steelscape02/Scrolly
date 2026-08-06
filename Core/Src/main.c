@@ -73,13 +73,10 @@ static bool motion_detected;
 static bool backlight_state = false;
 uint8_t I2C_ADDR =0x27; // I2C address of the PCF8574
 
-static char rotatingMessage[MAX_LEN] = "";
-
-uint8_t message[MAX_MESSAGE_SIZE] = {0}; // char array to store message received
+char message[MAX_MESSAGE_SIZE] = {0}; // char array to store message received
 uint8_t uart2_byte; // byte received from UART2
 uint8_t buffer_position = 0; // how many bytes received so far in message
 
-static char commands[2][30]= {"ADD", "ERASE"};
 char command[30] = "";
 
 /* USER CODE END PV */
@@ -144,8 +141,7 @@ int main(void)
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
   CharLCD_Init(&hi2c1, I2C_ADDR);
-  uint32_t scroll_pos = 0;
-    HAL_StatusTypeDef eeprom_status;
+  HAL_StatusTypeDef eeprom_status;
   HAL_UART_RegisterCallback(&huart2, HAL_UART_RX_COMPLETE_CB_ID, Handle_UART);
 
   HAL_UART_Receive_IT(&huart2, &uart2_byte, 1); // put byte from UART2 in "uart2_byte"
@@ -160,16 +156,17 @@ int main(void)
   HAL_PWR_EnablePVD();
 
   // TODO: Add initialize function here to read all strings into app_comm
-  eeprom_status = EEPROM_ReadMessage(
-    &hi2c1,
-    MESSAGE_BLOCK,
-    MESSAGE_START_ADDRESS,
-    (char*)message,
-    sizeof(message)
-  );
+  eeprom_status = readFromEEPROM(&hi2c1);
 
   if (eeprom_status == HAL_OK && message[0] != '\0') {
-    StartText(&display, rotatingMessage, (const char*)message, MAX_LEN);
+    buildMessage();
+    if(needsScroll(LCD_COLS)){
+      display = true;
+      writeScrolling(&hi2c1, I2C_ADDR, LCD_COLS);
+    } else {
+      display = false;
+      writeNoScroll(&hi2c1, I2C_ADDR);
+    }
 
   } else if (eeprom_status != HAL_OK) {
     char *msg = "EEPROM read failed\r\n";
@@ -197,43 +194,36 @@ int main(void)
 
 	  if (new_message_ready) {
 		  new_message_ready = false;
-      if (strstr("add", message) != NULL) {
-        add((char*)message,sizeof((char*)message));
-      } else if (strstr("rem", message) != NULL){
+      if (strstr(message, "add") != NULL) {
+        add(message,sizeof(message));
+      } else if (strstr(message, "rem") != NULL){
         rem();
-      } else if (strstr("clr", message) != NULL){
+      } else if (strstr(message, "clr") != NULL){
         clr();
       } else { //Unrecognized command
 			  char* msg = "Unrecognized command\n\n";
 			  HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
 		  }
 
-      if (eeprom_status != HAL_OK) {
-        char *msg = "EEPROM write failed\r\n";
-        HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
-      }
-
       // TODO: Add message length check
       // Something like: app_comm NeedsScroll with bool retval
-
+      buildMessage();
+      display = true;
+      if(needsScroll(LCD_COLS)){
+        scroll = true;
+      } else {
+        scroll = false;
+      }
 		  memset(message, 0, sizeof(message));
 		  buffer_position = 0;
-		  scroll_pos=0;
 	  }
 	  if(display){
 		  if(scroll){ // Check scroll value
-        ShowFrame(&hi2c1, I2C_ADDR, LCD_COLS, scroll_pos, rotatingMessage);
-        if(scroll_pos < strlen(rotatingMessage)){
-				  scroll_pos++;
-			  }else{
-				  scroll_pos = 0;
-			  }
-			  HAL_Delay(500);
-			  
+        writeScrolling(&hi2c1, I2C_ADDR, LCD_COLS);
+        HAL_Delay(500);
 		  }else{
-        display = false; //don't reiterate this code until a new message is set, which will set display
-			  CharLCD_Set_Cursor(&hi2c1, 0, 0, I2C_ADDR);
-			  CharLCD_Write_String(&hi2c1, I2C_ADDR, rotatingMessage);
+        writeNoScroll(&hi2c1, I2C_ADDR);
+        display = false;
 		  }
 	  }
 

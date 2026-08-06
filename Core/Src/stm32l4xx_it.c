@@ -207,7 +207,7 @@ void SysTick_Handler(void)
 void PVD_PVM_IRQHandler(void)
 {
   /* USER CODE BEGIN PVD_PVM_IRQn 0 */
-  
+  writeToEEPROM(&hi2c1);
   /* USER CODE END PVD_PVM_IRQn 0 */
   HAL_PWREx_PVD_PVM_IRQHandler();
   /* USER CODE BEGIN PVD_PVM_IRQn 1 */
