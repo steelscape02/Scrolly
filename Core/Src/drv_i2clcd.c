@@ -157,32 +157,6 @@ void CharLCD_WriteScrolling(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, uint16_t
 }
 
 /**
- * @brief Write a string to the LCD at the current cursor position
- * @param display: Pointer to a boolean indicating if the display is active
- * @param rotatingMessage: Buffer to hold the message to display
- * @param new_str: New string to display
- * @param MAX_LEN: Maximum length of the message buffer
- * @retval None
- */
-void StartText(bool *display, char rotatingMessage[], const char *new_str, uint16_t MAX_LEN){
-	*display = true;
-	strncpy(rotatingMessage, new_str, MAX_LEN-1);
-	//TODO: Add support for multiple strings? AFTER minimum ver release
-}		
-
-/**
- * @brief Stop displaying text on the LCD and clear the display
- * @param display: Pointer to a boolean indicating if the display is active
- * @param hi2c1: Pointer to I2C handle (e.g., &hi2c1)
- * @param I2C_ADDR: I2C address of the LCD
- * @retval None
- */
-void StopText(bool *display, I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR){
-	*display = false;
-	CharLCD_Clear(hi2c1, I2C_ADDR);
-}
-
-/**
  * @brief Write a frame to the screen
  * @param hi2c1: Pointer to I2C handle (e.g., &hi2c1)
  * @param I2C_ADDR: I2C address of the LCD

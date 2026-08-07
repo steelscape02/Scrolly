@@ -44,8 +44,7 @@ void add(char *str, size_t size) {
  * @brief Remove the last string in the list
  */
 void rem(void){
-
-    if (current_pos > 0 && current_pos <= MAX_STRINGS) {
+    if (current_pos > 0) {
         --current_pos;
         memset(strings[current_pos], 0, sizeof(strings[current_pos]));
     }
@@ -55,25 +54,22 @@ void rem(void){
  * @brief Remove all strings in the list
  */
 void clr(void){
-
-    for (int i=MAX_STRINGS; i>0; i--){
+    memset(printMessage, 0, sizeof(printMessage));
+    for (int i = 0; i < MAX_STRINGS; i++) {
         memset(strings[i], 0, sizeof(strings[i]));
-        current_pos = i;
     }
+    current_pos = 0;
 }
 
 /**
  * @brief Build message with the current contents of `strings`. Allows `writeScrolling` to be executed immediately after
  */
 void buildMessage(void){
-    char* tempMessage;
     printMessage[0] = '\0';
-    int i = 0;
-    do{
-        tempMessage = strings[i];
-        strcat(printMessage, tempMessage);
-        i++;
-    }while(strlen(tempMessage) != 0 || i < MAX_STRINGS);
+
+    for (int i = 0; i < current_pos; i++) {
+        strncat(printMessage, strings[i], sizeof(printMessage) - strlen(printMessage) - 1);
+    }
 
     scroll_pos = 0;
     // TODO: #7 Iterate through strings array and build a message string, then write to I2C with WriteScrolling
@@ -113,18 +109,21 @@ void writeScrolling(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, uint8_t LCD_COLS
  */
 HAL_StatusTypeDef readFromEEPROM(I2C_HandleTypeDef *hi2c1){
     HAL_StatusTypeDef eeprom_status;
-    // Call EEPROM_ReadMessage repeatedly to get back new messages
-    uint8_t start_address = MESSAGE_START_ADDRESS;
-    char *buffer = NULL;
-    size_t size;
-    do{
-        size = sizeof(buffer);
-        eeprom_status = EEPROM_ReadMessage(hi2c1, MESSAGE_BLOCK, start_address, buffer, size);
+    uint8_t address = MESSAGE_START_ADDRESS;
+    char buffer[MAX_STRING_LENGTH]; // a real, correctly-sized buffer
 
-        if(eeprom_status == HAL_OK) add(buffer, size);
-        else break;
-        
-    }while(size > 0);
+    do {
+        eeprom_status = EEPROM_ReadMessage(hi2c1, MESSAGE_BLOCK, address, buffer, sizeof(buffer));
+
+        if (eeprom_status != HAL_OK) break;
+
+        size_t len = strlen(buffer);
+        if (len == 0) break; // empty string = hit the 0xFF padding = no more stored messages
+
+        add(buffer, len);
+        address += (len + 1); // move past message and null terminator
+
+    } while (address < 256); //stay within one block
 
     return eeprom_status;
 }
@@ -135,25 +134,29 @@ HAL_StatusTypeDef readFromEEPROM(I2C_HandleTypeDef *hi2c1){
  * @return HAL_StatusTypeDef indicating success or failure
  */
 HAL_StatusTypeDef writeToEEPROM(I2C_HandleTypeDef *hi2c1){
-    HAL_StatusTypeDef eeprom_status;
+    HAL_StatusTypeDef eeprom_status = HAL_OK;
+    uint8_t address = MESSAGE_START_ADDRESS;
 
-    for(int i=0; i<MAX_STRINGS; i++){
+    for(int i = 0; i < MAX_STRINGS; i++){
         char *str = strings[i];
-        if(strlen((char*)str) > 0){
+        size_t len = strlen(str);
+
+        if(len > 0){
             eeprom_status = EEPROM_WritePage(
                 hi2c1,
                 MESSAGE_BLOCK,
-                MESSAGE_START_ADDRESS,
+                address,
                 (uint8_t*)str,
-                strlen((char*)str) + 1
+                len + 1   // include null terminator so read can find message boundaries
             );
 
             if(eeprom_status != HAL_OK){
                 break;
             }
+
+            address += (len + 1); // advance past this message before writing the next
         }
     }
-    //TODO: Handle extra chars in EEPROM that weren't overwritten
 
     return eeprom_status;
 }

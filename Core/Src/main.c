@@ -155,19 +155,12 @@ int main(void)
 
   HAL_PWR_EnablePVD();
 
-  // TODO: Add initialize function here to read all strings into app_comm
   eeprom_status = readFromEEPROM(&hi2c1);
+  HAL_Delay(5);
 
-  if (eeprom_status == HAL_OK && message[0] != '\0') {
-    buildMessage();
-    if(needsScroll(LCD_COLS)){
-      display = true;
-      writeScrolling(&hi2c1, I2C_ADDR, LCD_COLS);
-    } else {
-      display = false;
-      writeNoScroll(&hi2c1, I2C_ADDR);
-    }
-
+  if (eeprom_status == HAL_OK) {
+    message[0] = '\0';
+    new_message_ready = true;
   } else if (eeprom_status != HAL_OK) {
     char *msg = "EEPROM read failed\r\n";
     HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
@@ -184,6 +177,7 @@ int main(void)
 			  backlight_state = motion_detected;
 		  } else {
 			  LCD_Backlight_Off(&hi2c1, I2C_ADDR);
+        // TODO: #12 LCD Clear here wipes no scroll messages, as display doesn't come back up.
         CharLCD_Clear(&hi2c1, I2C_ADDR); // Clear the display
         backlight_state = motion_detected;
         continue;
@@ -194,16 +188,17 @@ int main(void)
 
 	  if (new_message_ready) {
 		  new_message_ready = false;
-      if (strstr(message, "add") != NULL) {
-        add(message,sizeof(message));
-      } else if (strstr(message, "rem") != NULL){
+      if (strncmp(message, "add", 3) == 0) {
+        SplitAndRemove_String(message, "add");
+        add(message, sizeof(message));
+      } else if (strncmp(message, "rem", 3) == 0) {
         rem();
-      } else if (strstr(message, "clr") != NULL){
+      } else if (strncmp(message, "clr", 3) == 0) {
         clr();
-      } else { //Unrecognized command
-			  char* msg = "Unrecognized command\n\n";
-			  HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
-		  }
+      } else {
+        char* msg = "Unrecognized command\n\n";
+        HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+      }
 
       // TODO: Add message length check
       // Something like: app_comm NeedsScroll with bool retval
@@ -218,6 +213,7 @@ int main(void)
 		  buffer_position = 0;
 	  }
 	  if(display){
+      CharLCD_Clear(&hi2c1, I2C_ADDR);
 		  if(scroll){ // Check scroll value
         writeScrolling(&hi2c1, I2C_ADDR, LCD_COLS);
         HAL_Delay(500);
