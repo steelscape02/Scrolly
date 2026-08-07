@@ -174,6 +174,7 @@ int main(void)
 	  if (motion_detected != backlight_state) {
 		  if (motion_detected) {
 			  LCD_Backlight_On(&hi2c1, I2C_ADDR);
+        display = true;
 			  backlight_state = motion_detected;
 		  } else {
 			  LCD_Backlight_Off(&hi2c1, I2C_ADDR);
