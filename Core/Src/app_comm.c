@@ -76,7 +76,7 @@ void buildMessage(void){
 }
 
 bool needsScroll(uint16_t LCD_COLS){
-    if(strlen(printMessage) > LCD_COLS){
+    if(strlen(printMessage) - 2 > LCD_COLS){
         return true;
     }
     return false;
@@ -135,28 +135,15 @@ HAL_StatusTypeDef readFromEEPROM(I2C_HandleTypeDef *hi2c1){
  */
 HAL_StatusTypeDef writeToEEPROM(I2C_HandleTypeDef *hi2c1){
     HAL_StatusTypeDef eeprom_status = HAL_OK;
-    uint8_t address = MESSAGE_START_ADDRESS;
 
-    for(int i = 0; i < MAX_STRINGS; i++){
-        char *str = strings[i];
-        size_t len = strlen(str);
+    eeprom_status = EEPROM_WritePage(
+        hi2c1,
+        MESSAGE_BLOCK,
+        MESSAGE_START_ADDRESS,
+        (uint8_t*)printMessage,
+        strlen(printMessage) + 1
+    );
 
-        if(len > 0){
-            eeprom_status = EEPROM_WritePage(
-                hi2c1,
-                MESSAGE_BLOCK,
-                address,
-                (uint8_t*)str,
-                len + 1   // include null terminator so read can find message boundaries
-            );
-
-            if(eeprom_status != HAL_OK){
-                break;
-            }
-
-            address += (len + 1); // advance past this message before writing the next
-        }
-    }
 
     return eeprom_status;
 }

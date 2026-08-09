@@ -51,6 +51,7 @@ extern "C" {
 
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
+extern uint8_t I2C_ADDR;
 
 /* USER CODE BEGIN EFP */
 

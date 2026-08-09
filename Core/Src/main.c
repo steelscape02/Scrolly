@@ -178,7 +178,6 @@ int main(void)
 			  backlight_state = motion_detected;
 		  } else {
 			  LCD_Backlight_Off(&hi2c1, I2C_ADDR);
-        // TODO: #12 LCD Clear here wipes no scroll messages, as display doesn't come back up.
         CharLCD_Clear(&hi2c1, I2C_ADDR); // Clear the display
         backlight_state = motion_detected;
         continue;

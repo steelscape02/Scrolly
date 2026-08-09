@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "app_comm.h"
+#include "drv_i2clcd.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,7 +43,6 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -207,6 +207,7 @@ void SysTick_Handler(void)
 void PVD_PVM_IRQHandler(void)
 {
   /* USER CODE BEGIN PVD_PVM_IRQn 0 */
+  LCD_Backlight_Off(&hi2c1,I2C_ADDR);
   writeToEEPROM(&hi2c1);
   /* USER CODE END PVD_PVM_IRQn 0 */
   HAL_PWREx_PVD_PVM_IRQHandler();

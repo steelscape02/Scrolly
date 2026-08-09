@@ -100,31 +100,6 @@ HAL_StatusTypeDef EEPROM_WritePage(I2C_HandleTypeDef *hi2c, uint8_t block, uint8
         bytes_written += bytes_to_write;
     }
 
-    // fill the rest of the block with the magic bit 
-    while (bytes_written < EEPROM_BLOCK_SIZE) {
-        uint16_t current_addr = global_address + bytes_written; // Calculate the current global address
-        uint8_t current_block = (current_addr >> 8) & 0x03; // Flop over to next block if necessary
-        uint8_t reg_addr = current_addr & 0xFF; // Find the offset in the current block (0-256)
-
-        uint16_t dev_address = (EEPROM_I2C_ADDRESS | current_block) << 1; // Convert to 8-bit address for HAL functions
-
-        status = HAL_I2C_Mem_Write(
-            hi2c,
-            dev_address,
-            reg_addr,
-            I2C_MEMADD_SIZE_8BIT,
-            (uint8_t *)"\xFF", // Write the magic bit (0xFF)
-            1, // Write 1 byte
-            HAL_MAX_DELAY
-        );
-
-        HAL_Delay(5); // Write cycle delay
-        if (status != HAL_OK) {
-            break;
-        }
-        bytes_written++;
-    }
-
     return status;
 }
 
