@@ -7,7 +7,7 @@
 
 void add(char *message, size_t size);
 void rem(void);
-void clr(void);
+void clr(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR);
 void buildMessage(void);
 bool needsScroll(uint16_t LCD_COLS);
 void writeNoScroll(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR);

@@ -194,7 +194,7 @@ int main(void)
       } else if (strncmp(message, "rem", 3) == 0) {
         rem();
       } else if (strncmp(message, "clr", 3) == 0) {
-        clr();
+        clr(&hi2c1, I2C_ADDR);
       } else {
         char* msg = "Unrecognized command\n\n";
         HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);

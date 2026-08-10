@@ -48,24 +48,28 @@ void rem(void){
         --current_pos;
         memset(strings[current_pos], 0, sizeof(strings[current_pos]));
     }
+    memset(printMessage, 0, sizeof(printMessage));
+    scroll_pos = 0;
 }
 
 /**
  * @brief Remove all strings in the list
  */
-void clr(void){
+void clr(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR){
+    CharLCD_Clear(hi2c1, I2C_ADDR);
     memset(printMessage, 0, sizeof(printMessage));
     for (int i = 0; i < MAX_STRINGS; i++) {
         memset(strings[i], 0, sizeof(strings[i]));
     }
     current_pos = 0;
+    scroll_pos = 0;
 }
 
 /**
  * @brief Build message with the current contents of `strings`. Allows `writeScrolling` to be executed immediately after
  */
 void buildMessage(void){
-    printMessage[0] = '\0';
+    memset(printMessage, 0, sizeof(printMessage));
 
     for (int i = 0; i < current_pos; i++) {
         strncat(printMessage, strings[i], sizeof(printMessage) - strlen(printMessage) - 1);
@@ -76,10 +80,8 @@ void buildMessage(void){
 }
 
 bool needsScroll(uint16_t LCD_COLS){
-    if(strlen(printMessage) - 2 > LCD_COLS){
-        return true;
-    }
-    return false;
+    size_t message_len = strlen(printMessage);
+    return (message_len > LCD_COLS);
 }
 
 
