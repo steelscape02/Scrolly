@@ -143,6 +143,7 @@ void CharLCD_Write_Nibble(I2C_HandleTypeDef *hi2c1, uint8_t nibble, uint8_t dc, 
  */
 void CharLCD_Write_String(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, char str[]){
 	for (int i = 0; str[i] != '\0'; i++) {
+		if(str[i] == 0x03) continue;
 		CharLCD_Send_Data(hi2c1, str[i], false, I2C_ADDR);
 	}
 }

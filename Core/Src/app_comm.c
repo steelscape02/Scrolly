@@ -28,7 +28,7 @@ uint8_t scroll_pos = 0;
  * @param size The length of the message to be added
  */
 void add(char *str, size_t size) {
-
+    
     if (size < MAX_STRING_LENGTH - 1){
 
         if (current_pos < MAX_STRINGS) {
@@ -72,11 +72,18 @@ void buildMessage(void){
     memset(printMessage, 0, sizeof(printMessage));
 
     for (int i = 0; i < current_pos; i++) {
+        //TODO #22 ensure null termination on each string
         strncat(printMessage, strings[i], sizeof(printMessage) - strlen(printMessage) - 1);
     }
 
+    size_t message_len = strlen(printMessage);
+
+    if (message_len + 2 <= sizeof(printMessage)) {
+        printMessage[message_len] = 0x03;
+        printMessage[message_len + 1] = '\0';
+    }
+    
     scroll_pos = 0;
-    // TODO: #7 Iterate through strings array and build a message string, then write to I2C with WriteScrolling
 }
 
 bool needsScroll(uint16_t LCD_COLS){
@@ -113,7 +120,7 @@ HAL_StatusTypeDef readFromEEPROM(I2C_HandleTypeDef *hi2c1){
     HAL_StatusTypeDef eeprom_status;
     uint8_t address = MESSAGE_START_ADDRESS;
     char buffer[MAX_STRING_LENGTH]; // a real, correctly-sized buffer
-
+    //TODO: #21 Read until 0x03 control char
     do {
         eeprom_status = EEPROM_ReadMessage(hi2c1, MESSAGE_BLOCK, address, buffer, sizeof(buffer));
 
@@ -121,8 +128,12 @@ HAL_StatusTypeDef readFromEEPROM(I2C_HandleTypeDef *hi2c1){
 
         size_t len = strlen(buffer);
         if (len == 0) break; // empty string = hit the 0xFF padding = no more stored messages
-
+        
         add(buffer, len);
+
+        //check for 0x03 end of text control char
+        if(strchr(buffer, 0x03) != NULL) break;
+        
         address += (len + 1); // move past message and null terminator
 
     } while (address < 256); //stay within one block
@@ -137,15 +148,18 @@ HAL_StatusTypeDef readFromEEPROM(I2C_HandleTypeDef *hi2c1){
  */
 HAL_StatusTypeDef writeToEEPROM(I2C_HandleTypeDef *hi2c1){
     HAL_StatusTypeDef eeprom_status = HAL_OK;
+    size_t message_len = strlen(printMessage);
+
+    
+    //TODO: #20 Append 0x03 (ETX) control char to signify end of msg
 
     eeprom_status = EEPROM_WritePage(
         hi2c1,
         MESSAGE_BLOCK,
         MESSAGE_START_ADDRESS,
-        (uint8_t*)printMessage,
-        strlen(printMessage) + 1
+        (const uint8_t *)printMessage,
+        message_len + 1
     );
-
 
     return eeprom_status;
 }
