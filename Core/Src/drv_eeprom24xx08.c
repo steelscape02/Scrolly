@@ -191,7 +191,7 @@ HAL_StatusTypeDef EEPROM_ReadMessage(I2C_HandleTypeDef *hi2c, uint8_t block, uin
 			break;
 		}
 	}
-	buffer[i] = '\0'; // Guarantee null-termination
+	buffer[i+1] = '\0'; // Guarantee null-termination
 
     return status;
 }

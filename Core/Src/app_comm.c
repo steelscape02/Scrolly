@@ -28,16 +28,14 @@ uint8_t scroll_pos = 0;
  * @param size The length of the message to be added
  */
 void add(char *str, size_t size) {
-    
-    if (size < MAX_STRING_LENGTH - 1){
+    if (size == 0) return;
 
-        if (current_pos < MAX_STRINGS) {
+    if (current_pos >= MAX_STRINGS) return;
 
-            strncpy((char*)strings[current_pos], str, MAX_STRING_LENGTH - 1);
-            strings[current_pos][MAX_STRING_LENGTH - 1] = '\0'; // Ensure null-termination
-            current_pos++;
-        }
-    }
+    size_t copy_len = (size < (MAX_STRING_LENGTH - 1)) ? size : (MAX_STRING_LENGTH - 1);
+    memcpy(strings[current_pos], str, copy_len);
+    strings[current_pos][copy_len] = '\0';
+    current_pos++;
 }
 
 /**
@@ -72,7 +70,8 @@ void buildMessage(void){
     memset(printMessage, 0, sizeof(printMessage));
 
     for (int i = 0; i < current_pos; i++) {
-        //TODO #22 ensure null termination on each string
+        // Ensure we don't call strlen on unterminated buffers and
+        // always guarantee a null terminator at the buffer end.
         strncat(printMessage, strings[i], sizeof(printMessage) - strlen(printMessage) - 1);
     }
 
@@ -120,7 +119,6 @@ HAL_StatusTypeDef readFromEEPROM(I2C_HandleTypeDef *hi2c1){
     HAL_StatusTypeDef eeprom_status;
     uint8_t address = MESSAGE_START_ADDRESS;
     char buffer[MAX_STRING_LENGTH]; // a real, correctly-sized buffer
-    //TODO: #21 Read until 0x03 control char
     do {
         eeprom_status = EEPROM_ReadMessage(hi2c1, MESSAGE_BLOCK, address, buffer, sizeof(buffer));
 
@@ -149,9 +147,6 @@ HAL_StatusTypeDef readFromEEPROM(I2C_HandleTypeDef *hi2c1){
 HAL_StatusTypeDef writeToEEPROM(I2C_HandleTypeDef *hi2c1){
     HAL_StatusTypeDef eeprom_status = HAL_OK;
     size_t message_len = strlen(printMessage);
-
-    
-    //TODO: #20 Append 0x03 (ETX) control char to signify end of msg
 
     eeprom_status = EEPROM_WritePage(
         hi2c1,

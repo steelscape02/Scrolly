@@ -190,7 +190,7 @@ int main(void)
 		  new_message_ready = false;
       if (strncmp(message, "add", 3) == 0) {
         SplitAndRemove_String(message, "add");
-        add(message, sizeof(message));
+        add(message, strlen(message));
       } else if (strncmp(message, "rem", 3) == 0) {
         rem();
       } else if (strncmp(message, "clr", 3) == 0) {
@@ -475,12 +475,10 @@ void Handle_UART(UART_HandleTypeDef *huart){
 		if (buffer_position < MAX_MESSAGE_SIZE - 1){
 			message[buffer_position++] = uart2_byte;
 		}
-	} else {
-		message[buffer_position] = ' ';
-		message[buffer_position + 1] = ' ';
-		message[buffer_position + 2] = '\0';
-		new_message_ready = true;   // just flag it
-	}
+  } else {
+    strncat(message, "   ", MAX_MESSAGE_SIZE - strlen(message) - 1);
+    new_message_ready = true;   // just flag it
+  }
 	HAL_UART_Receive_IT(&huart2, &uart2_byte, 1);
 }
 
