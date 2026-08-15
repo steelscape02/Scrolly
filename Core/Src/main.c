@@ -196,7 +196,7 @@ int main(void)
       } else if (strncmp(message, "clr", 3) == 0) {
         clr(&hi2c1, I2C_ADDR);
       } else {
-        char* msg = "Unrecognized command\n\n";
+        char* msg = "Unrecognized command\r\n\n";
         HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
       }
 
@@ -471,6 +471,17 @@ static void MX_GPIO_Init(void)
 void Handle_UART(UART_HandleTypeDef *huart){
 	if (huart->Instance != USART2) return;
 
+	if (uart2_byte == '\b' || uart2_byte == 0x7F) {
+		if (buffer_position > 0) {
+			buffer_position--;
+			message[buffer_position] = '\0';
+			HAL_UART_Transmit(&huart2, (uint8_t*)"\b \b", 3, HAL_MAX_DELAY);
+		}
+		HAL_UART_Receive_IT(&huart2, &uart2_byte, 1);
+		return;
+	}
+
+  HAL_UART_Transmit(&huart2, &uart2_byte, 1, HAL_MAX_DELAY); // echo back the received byte
 	if ((uart2_byte != '\r') && (uart2_byte != '\n') && (uart2_byte != '\0')){
 		if (buffer_position < MAX_MESSAGE_SIZE - 1){
 			message[buffer_position++] = uart2_byte;
