@@ -76,6 +76,7 @@ uint8_t I2C_ADDR =0x27; // I2C address of the PCF8574
 char message[MAX_MESSAGE_SIZE] = {0}; // char array to store message received
 uint8_t uart2_byte; // byte received from UART2
 uint8_t buffer_position = 0; // how many bytes received so far in message
+static bool last_rx_was_cr = false;
 
 char command[30] = "";
 
@@ -477,19 +478,46 @@ void Handle_UART(UART_HandleTypeDef *huart){
 			message[buffer_position] = '\0';
 			HAL_UART_Transmit(&huart2, (uint8_t*)"\b \b", 3, HAL_MAX_DELAY);
 		}
+		last_rx_was_cr = false;
 		HAL_UART_Receive_IT(&huart2, &uart2_byte, 1);
 		return;
 	}
 
-  HAL_UART_Transmit(&huart2, &uart2_byte, 1, HAL_MAX_DELAY); // echo back the received byte
-	if ((uart2_byte != '\r') && (uart2_byte != '\n') && (uart2_byte != '\0')){
-		if (buffer_position < MAX_MESSAGE_SIZE - 1){
-			message[buffer_position++] = uart2_byte;
+	if (uart2_byte == '\r') {
+		HAL_UART_Transmit(&huart2, (uint8_t*)"\r\n", 2, HAL_MAX_DELAY);
+		if (buffer_position > 0) {
+			message[buffer_position] = '\0';
+			new_message_ready = true;
 		}
-  } else {
-    strncat(message, "   ", MAX_MESSAGE_SIZE - strlen(message) - 1);
-    new_message_ready = true;   // just flag it
-  }
+		last_rx_was_cr = true;
+		HAL_UART_Receive_IT(&huart2, &uart2_byte, 1);
+		return;
+	}
+
+	if (uart2_byte == '\n') {
+		if (!last_rx_was_cr) {
+			HAL_UART_Transmit(&huart2, (uint8_t*)"\r\n", 2, HAL_MAX_DELAY);
+			if (buffer_position > 0) {
+				message[buffer_position] = '\0';
+				new_message_ready = true;
+			}
+		}
+		last_rx_was_cr = false;
+		HAL_UART_Receive_IT(&huart2, &uart2_byte, 1);
+		return;
+	}
+
+	if (uart2_byte == '\0') {
+		last_rx_was_cr = false;
+		HAL_UART_Receive_IT(&huart2, &uart2_byte, 1);
+		return;
+	}
+
+	HAL_UART_Transmit(&huart2, &uart2_byte, 1, HAL_MAX_DELAY);
+	if (buffer_position < MAX_MESSAGE_SIZE - 1){
+		message[buffer_position++] = uart2_byte;
+	}
+	last_rx_was_cr = false;
 	HAL_UART_Receive_IT(&huart2, &uart2_byte, 1);
 }
 

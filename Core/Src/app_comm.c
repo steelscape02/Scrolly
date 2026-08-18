@@ -21,6 +21,7 @@ char strings[MAX_STRINGS][MAX_STRING_LENGTH];
 char printMessage[MAX_MESSAGE_LENGTH] = {0};
 uint8_t current_pos = 0;
 uint8_t scroll_pos = 0;
+size_t current_offset = 0;
 
 /**
  * @brief Add a string to the existing `strings` list
@@ -34,7 +35,6 @@ void add(char *str, size_t size) {
 
     size_t copy_len = (size < (MAX_STRING_LENGTH - 1)) ? size : (MAX_STRING_LENGTH - 1);
     memcpy(strings[current_pos], str, copy_len);
-    strings[current_pos][copy_len] = '\0';
     current_pos++;
 }
 
@@ -66,28 +66,42 @@ void clr(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR){
 /**
  * @brief Build message with the current contents of `strings`. Allows `writeScrolling` to be executed immediately after
  */
-void buildMessage(void){
+void buildMessage(void) {
+    // Clear the buffer
     memset(printMessage, 0, sizeof(printMessage));
+    current_offset = 0;
 
     for (int i = 0; i < current_pos; i++) {
-        // Ensure we don't call strlen on unterminated buffers and
-        // always guarantee a null terminator at the buffer end.
-        strncat(printMessage, strings[i], sizeof(printMessage) - strlen(printMessage) - 1);
+        size_t len = strlen(strings[i]);
+
+        // Ensure we have enough space for the string + a null terminator
+        if (current_offset + len + 1 <= sizeof(printMessage)) {
+            
+            // Copy the string data into the buffer at the current offset
+            memcpy(&printMessage[current_offset], strings[i], len);
+            current_offset += len;
+
+            // Explicitly add the null terminator to separate the strings
+            printMessage[current_offset] = '\0';
+            current_offset++; 
+            
+        } else {
+            // Buffer is full, stop adding strings
+            break; 
+        }
     }
 
-    size_t message_len = strlen(printMessage);
-
-    if (message_len + 2 <= sizeof(printMessage)) {
-        printMessage[message_len] = 0x03;
-        printMessage[message_len + 1] = '\0';
+    // Add the 0x03 (End of Text) marker if there is remaining room
+    if (current_offset + 1 <= sizeof(printMessage)) {
+        printMessage[current_offset] = 0x03;
+        printMessage[current_offset + 1] = '\0'; 
     }
     
     scroll_pos = 0;
 }
 
 bool needsScroll(uint16_t LCD_COLS){
-    size_t message_len = strlen(printMessage);
-    return (message_len > LCD_COLS);
+    return (current_offset > LCD_COLS);
 }
 
 
@@ -103,7 +117,7 @@ void writeNoScroll(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR){
  */
 void writeScrolling(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, uint8_t LCD_COLS){
     CharLCD_WriteScrolling(hi2c1, I2C_ADDR, LCD_COLS, scroll_pos, printMessage);
-    if(scroll_pos < strlen(printMessage)){
+    if(scroll_pos < current_offset - LCD_COLS){
         scroll_pos++;
     }else{
         scroll_pos = 0;
@@ -146,14 +160,13 @@ HAL_StatusTypeDef readFromEEPROM(I2C_HandleTypeDef *hi2c1){
  */
 HAL_StatusTypeDef writeToEEPROM(I2C_HandleTypeDef *hi2c1){
     HAL_StatusTypeDef eeprom_status = HAL_OK;
-    size_t message_len = strlen(printMessage);
 
     eeprom_status = EEPROM_WritePage(
         hi2c1,
         MESSAGE_BLOCK,
         MESSAGE_START_ADDRESS,
         (const uint8_t *)printMessage,
-        message_len + 1
+        current_offset
     );
 
     return eeprom_status;

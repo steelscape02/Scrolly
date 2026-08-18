@@ -3,13 +3,19 @@
         {
             "label": "CMake: build",
             "type": "process",
-            "command": "C:/Program Files/CMake/bin/cmake.exe",
+            "command": "cmake",
             "args": [
                 "--build",
                 "${workspaceFolder}/build/Debug",
                 "--target",
                 "Scrolly"
             ],
+            "windows": {
+                "command": "C:/Program Files/CMake/bin/cmake.exe"
+            },
+            "linux": {
+                "command": "cmake"
+            },
             "problemMatcher": [
                 "$gcc"
             ],

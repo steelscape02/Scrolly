@@ -1,7 +1,9 @@
 {
   "version": "0.2.0",
   "configurations": [
-    { "name": "Debug STM32 (OpenOCD)",
+
+    {
+      "name": "Debug STM32 (OpenOCD) [Linux]",
       "type": "cortex-debug",
       "request": "launch",
       "servertype": "openocd",
@@ -9,11 +11,29 @@
       "cwd": "${workspaceFolder}",
       "runToEntryPoint": "main",
       "svdFile": "${workspaceFolder}/.vscode/STM32L476.svd",
+      "preLaunchTask": "CMake: build",
+      "serverpath": "/usr/bin/openocd",
+      "gdbPath": "/usr/local/bin/arm-none-eabi-gdb",
+      "configFiles": [
+        "/usr/share/openocd/scripts/interface/stlink.cfg",
+        "/usr/share/openocd/scripts/target/stm32l4x.cfg"
+      ]
+    },
+    {
+      "name": "Debug STM32 (OpenOCD) [Windows]",
+      "type": "cortex-debug",
+      "request": "launch",
+      "servertype": "openocd",
+      "executable": "${workspaceFolder}/build/Debug/${workspaceFolderBasename}.elf",
+      "cwd": "${workspaceFolder}",
+      "runToEntryPoint": "main",
+      "svdFile": "${workspaceFolder}/.vscode/STM32L476.svd",
+      "preLaunchTask": "CMake: build",
+      "serverpath": "C:/openocd/bin/openocd.exe",
       "configFiles": [
         "C:/openocd/bin/scripts/interface/stlink.cfg",
         "C:/openocd/bin/scripts/target/stm32l4x.cfg"
-      ],
-      "preLaunchTask": "CMake: build"
+      ]
     },
     {
       "name": "Debug STM32 (ST-LINK)",
@@ -21,13 +41,11 @@
       "request": "launch",
       "servertype": "stlink",
       "cwd": "${workspaceFolder}",
-      "executable": "${workspaceFolder}/build/Debug/Scrolly.elf", // Path to your compiled ELF file
-      "device": "STM32L476RG",                                  // Change to your target chip model
+      "executable": "${workspaceFolder}/build/Debug/Scrolly.elf",
+      "device": "STM32L476RG",
       "interface": "swd",
       "runToEntryPoint": "main",
-      // Point this to your installed ST-LINK GDB Server executable:
       "serverpath": "C:/ST/STM32CubeIDE_2.1.1/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.stlink-gdb-server.win32_2.2.500.202604010938/tools/bin/ST-LINK_gdbserver.exe",
-      // Point this to the arm-none-eabi-gdb executable:E
       "gdbPath": "C:/ST/STM32CubeCLT_1.22.0/GNU-tools-for-STM32/bin/arm-none-eabi-gdb.exe"
     }
   ]
