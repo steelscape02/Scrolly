@@ -142,7 +142,7 @@ int main(void)
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
   CharLCD_Init(&hi2c1, I2C_ADDR);
-  HAL_StatusTypeDef eeprom_status;
+  HAL_StatusTypeDef eeprom_status = HAL_OK;
   HAL_UART_RegisterCallback(&huart2, HAL_UART_RX_COMPLETE_CB_ID, Handle_UART);
 
   HAL_UART_Receive_IT(&huart2, &uart2_byte, 1); // put byte from UART2 in "uart2_byte"
@@ -156,7 +156,8 @@ int main(void)
 
   HAL_PWR_EnablePVD();
 
-  eeprom_status = readFromEEPROM(&hi2c1);
+  // TODO: #25 Fix corrupt read from EEPROM
+  //eeprom_status = readFromEEPROM(&hi2c1);
   HAL_Delay(5);
 
   if (eeprom_status == HAL_OK) {
@@ -192,7 +193,10 @@ int main(void)
       if (strncmp(message, "add", 3) == 0) {
         SplitAndRemove_String(message, "add");
         add(message, strlen(message));
+        //buildMessage();
+
       } else if (strncmp(message, "rem", 3) == 0) {
+        // TODO fix the way rem works
         rem();
       } else if (strncmp(message, "clr", 3) == 0) {
         clr(&hi2c1, I2C_ADDR);
@@ -200,10 +204,7 @@ int main(void)
         char* msg = "Unrecognized command\r\n\n";
         HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
       }
-
-      // TODO: Add message length check
-      // Something like: app_comm NeedsScroll with bool retval
-      buildMessage();
+      
       display = true;
       if(needsScroll(LCD_COLS)){
         scroll = true;
@@ -472,6 +473,7 @@ static void MX_GPIO_Init(void)
 void Handle_UART(UART_HandleTypeDef *huart){
 	if (huart->Instance != USART2) return;
 
+  // backspace handler
 	if (uart2_byte == '\b' || uart2_byte == 0x7F) {
 		if (buffer_position > 0) {
 			buffer_position--;
@@ -483,6 +485,7 @@ void Handle_UART(UART_HandleTypeDef *huart){
 		return;
 	}
 
+  // carriage return
 	if (uart2_byte == '\r') {
 		HAL_UART_Transmit(&huart2, (uint8_t*)"\r\n", 2, HAL_MAX_DELAY);
 		if (buffer_position > 0) {
@@ -494,6 +497,7 @@ void Handle_UART(UART_HandleTypeDef *huart){
 		return;
 	}
 
+  // newline
 	if (uart2_byte == '\n') {
 		if (!last_rx_was_cr) {
 			HAL_UART_Transmit(&huart2, (uint8_t*)"\r\n", 2, HAL_MAX_DELAY);
@@ -507,13 +511,17 @@ void Handle_UART(UART_HandleTypeDef *huart){
 		return;
 	}
 
+  // null terminator - end of string
 	if (uart2_byte == '\0') {
 		last_rx_was_cr = false;
 		HAL_UART_Receive_IT(&huart2, &uart2_byte, 1);
 		return;
 	}
 
+  // echo byte back to sender
 	HAL_UART_Transmit(&huart2, &uart2_byte, 1, HAL_MAX_DELAY);
+
+  // append to message buffer
 	if (buffer_position < MAX_MESSAGE_SIZE - 1){
 		message[buffer_position++] = uart2_byte;
 	}

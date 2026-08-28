@@ -36,6 +36,20 @@ void add(char *str, size_t size) {
     size_t copy_len = (size < (MAX_STRING_LENGTH - 1)) ? size : (MAX_STRING_LENGTH - 1);
     memcpy(strings[current_pos], str, copy_len);
     current_pos++;
+    
+    char temp_str[MAX_STRING_LENGTH];
+    strcpy(temp_str, str);
+
+    strcat(temp_str, "  ");
+    size_t len = strlen(temp_str);
+    temp_str[len] = '\0';
+    temp_str[len + 1] = 0x03;
+    
+
+    memcpy(&printMessage[current_offset], temp_str, len + 2);
+    current_offset = len + 1;
+    scroll_pos = 0;
+    HAL_Delay(1);
 }
 
 /**
@@ -59,6 +73,7 @@ void clr(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR){
     for (int i = 0; i < MAX_STRINGS; i++) {
         memset(strings[i], 0, sizeof(strings[i]));
     }
+    current_offset = 0;
     current_pos = 0;
     scroll_pos = 0;
 }
@@ -67,9 +82,7 @@ void clr(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR){
  * @brief Build message with the current contents of `strings`. Allows `writeScrolling` to be executed immediately after
  */
 void buildMessage(void) {
-    // Clear the buffer
-    memset(printMessage, 0, sizeof(printMessage));
-    current_offset = 0;
+    // TODO: Examine buildMessage to evaluate why null terminators are not being added between strings.
 
     for (int i = 0; i < current_pos; i++) {
         size_t len = strlen(strings[i]);
@@ -80,6 +93,8 @@ void buildMessage(void) {
             // Copy the string data into the buffer at the current offset
             memcpy(&printMessage[current_offset], strings[i], len);
             current_offset += len;
+            strcat(printMessage, "  ");
+            current_offset += 2;
 
             // Explicitly add the null terminator to separate the strings
             printMessage[current_offset] = '\0';

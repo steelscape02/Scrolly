@@ -187,7 +187,7 @@ HAL_StatusTypeDef EEPROM_ReadMessage(I2C_HandleTypeDef *hi2c, uint8_t block, uin
 		);
         HAL_Delay(5); // Read cycle delay
 
-        if (status != HAL_OK || buffer[i] == '\0' || (uint8_t)buffer[i] == 0xFF) {
+        if (status != HAL_OK || buffer[i] == '\0' || buffer[i] == 0x03 || (uint8_t)buffer[i] == 0xFF) {
 			break;
 		}
 	}
