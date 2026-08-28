@@ -17,7 +17,11 @@
       "configFiles": [
         "/usr/share/openocd/scripts/interface/stlink.cfg",
         "/usr/share/openocd/scripts/target/stm32l4x.cfg"
-      ]
+      ],
+      "liveWatch": {
+        "enabled": true,
+        "samplesPerSecond": 4
+      }
     },
     {
       "name": "Debug STM32 (OpenOCD) [Windows]",

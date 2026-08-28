@@ -73,6 +73,7 @@
                 "kind": "build",
                 "isDefault": false
             },
+            "dependsOn": "CMake: build",
             "problemMatcher": []
         }
     ],
