@@ -157,7 +157,7 @@ int main(void)
   HAL_PWR_EnablePVD();
 
   // TODO: #25 Fix corrupt read from EEPROM
-  //eeprom_status = readFromEEPROM(&hi2c1);
+  eeprom_status = EEPROM_ReadBuffer(&hi2c1);
   HAL_Delay(5);
 
   if (eeprom_status == HAL_OK) {
