@@ -71,6 +71,7 @@ static bool scroll = false;
 static bool new_message_ready = false;
 static bool motion_detected;
 static bool backlight_state = false;
+volatile bool eeprom_save_requested = false;
 uint8_t I2C_ADDR =0x27; // I2C address of the PCF8574
 
 char message[MAX_MESSAGE_SIZE] = {0}; // char array to store message received
@@ -141,6 +142,10 @@ int main(void)
   MX_I2C1_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
+
+  // DEBUG ONLY - Inject UART struct to app_comm module
+  sensorInit(&huart2);
+
   CharLCD_Init(&hi2c1, I2C_ADDR);
   HAL_StatusTypeDef eeprom_status = HAL_OK;
   HAL_UART_RegisterCallback(&huart2, HAL_UART_RX_COMPLETE_CB_ID, Handle_UART);
@@ -173,6 +178,12 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    if (eeprom_save_requested) {
+      eeprom_save_requested = false;
+      LCD_Backlight_Off(&hi2c1, I2C_ADDR);
+      writeToEEPROM(&hi2c1);
+    }
+
 	  if (motion_detected != backlight_state) {
 		  if (motion_detected) {
 			  LCD_Backlight_On(&hi2c1, I2C_ADDR);
@@ -190,19 +201,27 @@ int main(void)
 
 	  if (new_message_ready) {
 		  new_message_ready = false;
+		  bool persist_message = false;
       if (strncmp(message, "add", 3) == 0) {
         SplitAndRemove_String(message, "add");
         add(message, strlen(message));
+        persist_message = true;
         //buildMessage();
 
       } else if (strncmp(message, "rem", 3) == 0) {
         // TODO fix the way rem works
         rem();
+        persist_message = true;
       } else if (strncmp(message, "clr", 3) == 0) {
         clr(&hi2c1, I2C_ADDR);
+        persist_message = true;
       } else {
         char* msg = "Unrecognized command\r\n\n";
         HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+      }
+
+      if (persist_message) {
+        writeToEEPROM(&hi2c1);
       }
       
       display = true;
@@ -563,7 +582,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
  * @brief Callack function for Power Voltage Detection (PVD) interrupts. Triggers when voltage drops below 2.9V
  */
 void HAL_PWR_PVDCallback(void){
-  //writeToEEPROM();
+  eeprom_save_requested = true;
 }
 
 

@@ -7,12 +7,15 @@
 #include "app_comm.h"
 #include "drv_eeprom24xx08.h"
 #include "drv_i2clcd.h"
+#include "stm32l4xx_hal_uart.h"
 #include "string.h"
+#include "stdio.h"
 #include "stdbool.h"
 
 #define MAX_STRING_LENGTH (128)
 #define MAX_STRINGS (5)
 #define MAX_MESSAGE_LENGTH ((MAX_STRINGS) * (MAX_STRING_LENGTH))
+#define DEBUG_MESSAGE_LENGTH (64)
 
 #define MESSAGE_BLOCK 0 // Block 0 of the EEPROM
 #define HEADER_ADDRESS 0x00
@@ -35,6 +38,18 @@ char message_pool[MAX_MESSAGE_LENGTH]; // Raw string data: "Hello\0World\0"
 uint16_t string_offsets[MAX_STRINGS]; // Stores start index of each string
 uint8_t string_count = 0;
 uint16_t pool_tail = 0;
+
+// -- DEBUG -- //
+static UART_HandleTypeDef *log_uart = NULL;
+static char debug_msg[DEBUG_MESSAGE_LENGTH];
+
+void sensorInit(UART_HandleTypeDef *huart) {
+    log_uart = huart;
+}
+
+void createMetadataString(char *buf, size_t buf_size, uint8_t string_count, uint8_t pool_tail){
+    snprintf(buf, buf_size, "string_count: %u\r\npool_tail: %u\r\n", string_count, pool_tail);
+}
 
 /**
  * @brief Add a string to the existing `strings` list
@@ -176,7 +191,9 @@ HAL_StatusTypeDef EEPROM_ReadBuffer(I2C_HandleTypeDef *hi2c1) {
     string_count = header.count;
     pool_tail = header.tail;
     memcpy(string_offsets, header.offsets, sizeof(string_offsets));
-
+    
+    createMetadataString(debug_msg, sizeof(debug_msg), string_count, pool_tail);
+    HAL_UART_Transmit(log_uart, (uint8_t*)debug_msg, strlen(debug_msg), HAL_MAX_DELAY);
     // 4. Read the raw message_pool data back into RAM
     if (pool_tail > 0) {
         uint16_t pool_address = HEADER_ADDRESS + sizeof(EEPROM_Header_t);
@@ -188,6 +205,9 @@ HAL_StatusTypeDef EEPROM_ReadBuffer(I2C_HandleTypeDef *hi2c1) {
             (uint8_t *)message_pool,
             pool_tail
         );
+    }else{
+        snprintf(debug_msg, sizeof(debug_msg), "pool tail is 0\r\n");
+        HAL_UART_Transmit(log_uart, (uint8_t*)debug_msg, strlen(debug_msg), HAL_MAX_DELAY);
     }
 
     return status;

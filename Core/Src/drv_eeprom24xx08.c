@@ -47,7 +47,7 @@ HAL_StatusTypeDef EEPROM_WriteByte(I2C_HandleTypeDef *hi2c1, uint8_t block, uint
   * @param  data: Pointer to the buffer containing data to write
   * @param  len: Total number of bytes to write
   */
-HAL_StatusTypeDef EEPROM_WritePage(I2C_HandleTypeDef *hi2c, uint8_t block, uint8_t start_address, const uint8_t *data, size_t len) {
+HAL_StatusTypeDef EEPROM_WritePage(I2C_HandleTypeDef *hi2c, uint8_t block, uint16_t start_address, const uint8_t *data, size_t len) {
     size_t bytes_written = 0;
 
     // Convert starting block and offset into a single linear global address (0 to 1023)

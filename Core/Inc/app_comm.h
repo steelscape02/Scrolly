@@ -5,6 +5,10 @@
 #include "stdbool.h"
 #include "string.h"
 
+// -- DEBUG -- //
+void sensorInit(UART_HandleTypeDef *huart);
+void createMetadataString(char *buf, size_t buf_size, uint8_t string_count, uint8_t pool_tail);
+
 bool add(char *message, size_t len);
 void rem(void);
 void clr(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR);
