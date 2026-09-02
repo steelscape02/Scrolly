@@ -71,11 +71,13 @@ static bool scroll = false;
 static bool new_message_ready = false;
 static bool motion_detected;
 static bool backlight_state = false;
+volatile bool eeprom_save_requested = false;
 uint8_t I2C_ADDR =0x27; // I2C address of the PCF8574
 
 char message[MAX_MESSAGE_SIZE] = {0}; // char array to store message received
 uint8_t uart2_byte; // byte received from UART2
 uint8_t buffer_position = 0; // how many bytes received so far in message
+static bool last_rx_was_cr = false;
 
 char command[30] = "";
 
@@ -140,8 +142,12 @@ int main(void)
   MX_I2C1_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
+
+  // DEBUG ONLY - Inject UART struct to app_comm module
+  sensorInit(&huart2);
+
   CharLCD_Init(&hi2c1, I2C_ADDR);
-  HAL_StatusTypeDef eeprom_status;
+  HAL_StatusTypeDef eeprom_status = HAL_OK;
   HAL_UART_RegisterCallback(&huart2, HAL_UART_RX_COMPLETE_CB_ID, Handle_UART);
 
   HAL_UART_Receive_IT(&huart2, &uart2_byte, 1); // put byte from UART2 in "uart2_byte"
@@ -155,7 +161,8 @@ int main(void)
 
   HAL_PWR_EnablePVD();
 
-  eeprom_status = readFromEEPROM(&hi2c1);
+  // TODO: #25 Fix corrupt read from EEPROM
+  eeprom_status = EEPROM_ReadBuffer(&hi2c1);
   HAL_Delay(5);
 
   if (eeprom_status == HAL_OK) {
@@ -171,6 +178,12 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    if (eeprom_save_requested) {
+      eeprom_save_requested = false;
+      LCD_Backlight_Off(&hi2c1, I2C_ADDR);
+      writeToEEPROM(&hi2c1);
+    }
+
 	  if (motion_detected != backlight_state) {
 		  if (motion_detected) {
 			  LCD_Backlight_On(&hi2c1, I2C_ADDR);
@@ -178,7 +191,6 @@ int main(void)
 			  backlight_state = motion_detected;
 		  } else {
 			  LCD_Backlight_Off(&hi2c1, I2C_ADDR);
-        // TODO: #12 LCD Clear here wipes no scroll messages, as display doesn't come back up.
         CharLCD_Clear(&hi2c1, I2C_ADDR); // Clear the display
         backlight_state = motion_detected;
         continue;
@@ -189,21 +201,29 @@ int main(void)
 
 	  if (new_message_ready) {
 		  new_message_ready = false;
+		  bool persist_message = false;
       if (strncmp(message, "add", 3) == 0) {
         SplitAndRemove_String(message, "add");
-        add(message, sizeof(message));
+        add(message, strlen(message));
+        persist_message = true;
+        //buildMessage();
+
       } else if (strncmp(message, "rem", 3) == 0) {
+        // TODO fix the way rem works
         rem();
+        persist_message = true;
       } else if (strncmp(message, "clr", 3) == 0) {
-        clr();
+        clr(&hi2c1, I2C_ADDR);
+        persist_message = true;
       } else {
-        char* msg = "Unrecognized command\n\n";
+        char* msg = "Unrecognized command\r\n\n";
         HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
       }
 
-      // TODO: Add message length check
-      // Something like: app_comm NeedsScroll with bool retval
-      buildMessage();
+      if (persist_message) {
+        writeToEEPROM(&hi2c1);
+      }
+      
       display = true;
       if(needsScroll(LCD_COLS)){
         scroll = true;
@@ -472,16 +492,59 @@ static void MX_GPIO_Init(void)
 void Handle_UART(UART_HandleTypeDef *huart){
 	if (huart->Instance != USART2) return;
 
-	if ((uart2_byte != '\r') && (uart2_byte != '\n') && (uart2_byte != '\0')){
-		if (buffer_position < MAX_MESSAGE_SIZE - 1){
-			message[buffer_position++] = uart2_byte;
+  // backspace handler
+	if (uart2_byte == '\b' || uart2_byte == 0x7F) {
+		if (buffer_position > 0) {
+			buffer_position--;
+			message[buffer_position] = '\0';
+			HAL_UART_Transmit(&huart2, (uint8_t*)"\b \b", 3, HAL_MAX_DELAY);
 		}
-	} else {
-		message[buffer_position] = ' ';
-		message[buffer_position + 1] = ' ';
-		message[buffer_position + 2] = '\0';
-		new_message_ready = true;   // just flag it
+		last_rx_was_cr = false;
+		HAL_UART_Receive_IT(&huart2, &uart2_byte, 1);
+		return;
 	}
+
+  // carriage return
+	if (uart2_byte == '\r') {
+		HAL_UART_Transmit(&huart2, (uint8_t*)"\r\n", 2, HAL_MAX_DELAY);
+		if (buffer_position > 0) {
+			message[buffer_position] = '\0';
+			new_message_ready = true;
+		}
+		last_rx_was_cr = true;
+		HAL_UART_Receive_IT(&huart2, &uart2_byte, 1);
+		return;
+	}
+
+  // newline
+	if (uart2_byte == '\n') {
+		if (!last_rx_was_cr) {
+			HAL_UART_Transmit(&huart2, (uint8_t*)"\r\n", 2, HAL_MAX_DELAY);
+			if (buffer_position > 0) {
+				message[buffer_position] = '\0';
+				new_message_ready = true;
+			}
+		}
+		last_rx_was_cr = false;
+		HAL_UART_Receive_IT(&huart2, &uart2_byte, 1);
+		return;
+	}
+
+  // null terminator - end of string
+	if (uart2_byte == '\0') {
+		last_rx_was_cr = false;
+		HAL_UART_Receive_IT(&huart2, &uart2_byte, 1);
+		return;
+	}
+
+  // echo byte back to sender
+	HAL_UART_Transmit(&huart2, &uart2_byte, 1, HAL_MAX_DELAY);
+
+  // append to message buffer
+	if (buffer_position < MAX_MESSAGE_SIZE - 1){
+		message[buffer_position++] = uart2_byte;
+	}
+	last_rx_was_cr = false;
 	HAL_UART_Receive_IT(&huart2, &uart2_byte, 1);
 }
 
@@ -519,7 +582,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
  * @brief Callack function for Power Voltage Detection (PVD) interrupts. Triggers when voltage drops below 2.9V
  */
 void HAL_PWR_PVDCallback(void){
-  //writeToEEPROM();
+  eeprom_save_requested = true;
 }
 
 

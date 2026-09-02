@@ -3,13 +3,19 @@
         {
             "label": "CMake: build",
             "type": "process",
-            "command": "C:/Program Files/CMake/bin/cmake.exe",
+            "command": "cmake",
             "args": [
                 "--build",
                 "${workspaceFolder}/build/Debug",
                 "--target",
                 "Scrolly"
             ],
+            "windows": {
+                "command": "C:/Program Files/CMake/bin/cmake.exe"
+            },
+            "linux": {
+                "command": "cmake"
+            },
             "problemMatcher": [
                 "$gcc"
             ],
@@ -40,17 +46,34 @@
         },
         {
             "label": "Flash Nucleo",
-            "type": "shell",
-            "command": "STM32_Programmer_CLI",
-            "args": [
-                "-c", "port=SWD",
-                "-w", "${workspaceFolder}/build/Debug/Scrolly.elf",
-                "-rst"
-            ],
+            "windows": {
+                "type": "shell",
+                "command": "STM32_Programmer_CLI",
+                "args": [
+                    "-c", "port=SWD",
+                    "-w", "${workspaceFolder}/build/Debug/Scrolly.elf",
+                    "-rst"
+                ]
+            },
+            "linux": {
+                "command": "openocd",
+                "args": [
+                    "-f",
+                    "/usr/share/openocd/scripts/interface/stlink.cfg",
+                    "-f",
+                    "/usr/share/openocd/scripts/target/stm32l4x.cfg",
+                    "-c",
+                    "program ${workspaceFolder}/build/Debug/Scrolly.elf verify reset exit"
+                ],
+                "options": {
+                    "cwd": "${workspaceFolder}"
+                }
+            },
             "group": {
                 "kind": "build",
                 "isDefault": false
             },
+            "dependsOn": "CMake: build",
             "problemMatcher": []
         }
     ],
