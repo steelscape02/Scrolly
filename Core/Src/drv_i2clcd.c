@@ -138,23 +138,25 @@ void CharLCD_Write_Nibble(I2C_HandleTypeDef *hi2c1, uint8_t nibble, uint8_t dc, 
  * @brief Write a string to the LCD at the current cursor position
  * @param hi2c1: Pointer to I2C handle (e.g., &hi2c1)
  * @param I2C_ADDR: I2C address of the LCD
- * @param str: Null-terminated string to display
+ * @param str: Message bytes to display
+ * @param message_length: Number of message bytes, including embedded terminators
  * @retval None
  */
-void CharLCD_Write_String(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, char str[]){
-	for (int i = 0; str[i] != '\0'; i++) {
-		if(str[i] == 0x03) continue;
-		CharLCD_Send_Data(hi2c1, str[i], false, I2C_ADDR);
+void CharLCD_Write_String(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, char str[], size_t message_length){
+	for (size_t i = 0; i < message_length; i++) {
+		char character = str[i] == '\0' ? '  ' : str[i];
+		if(character == 0x03) continue;
+		CharLCD_Send_Data(hi2c1, character, false, I2C_ADDR);
 	}
 }
 
-void CharLCD_WriteNoScroll(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, char* message){
+void CharLCD_WriteNoScroll(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, char* message, size_t message_length){
 	CharLCD_Set_Cursor(hi2c1, 0, 0, I2C_ADDR);
-    CharLCD_Write_String(hi2c1, I2C_ADDR, message);
+    CharLCD_Write_String(hi2c1, I2C_ADDR, message, message_length);
 }
 
-void CharLCD_WriteScrolling(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, uint16_t LCD_COLS, uint32_t scroll_pos, char* message){
-	ShowFrame(hi2c1, I2C_ADDR, LCD_COLS, scroll_pos, message);
+void CharLCD_WriteScrolling(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, uint16_t LCD_COLS, uint32_t scroll_pos, char* message, size_t message_length){
+	ShowFrame(hi2c1, I2C_ADDR, LCD_COLS, scroll_pos, message, message_length);
 }
 
 /**
@@ -166,13 +168,14 @@ void CharLCD_WriteScrolling(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, uint16_t
  * @param message: The message to display
  * @retval None
  */
-void ShowFrame(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, uint16_t LCD_COLS, int scroll_pos, char message[]){
-    static uint32_t pos = 0;
-	uint32_t length = strlen(message);
-	for(int i=0; i<LCD_COLS; i++){
+void ShowFrame(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, uint16_t LCD_COLS, int scroll_pos, char message[], size_t message_length){
+	if (message_length == 0) return;
+
+	for(uint16_t i = 0; i < LCD_COLS; i++){
 		CharLCD_Set_Cursor(hi2c1, 0, i, I2C_ADDR);
-		pos = (i+scroll_pos) % length;
-		CharLCD_Send_Data(hi2c1, message[pos], false, I2C_ADDR);
+		size_t pos = (i + scroll_pos) % message_length;
+		char character = message[pos] == '\0' ? '  ' : message[pos];
+		CharLCD_Send_Data(hi2c1, character, false, I2C_ADDR);
 	}
 }
 

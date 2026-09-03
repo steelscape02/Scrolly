@@ -72,47 +72,14 @@ bool add(char *str, size_t len) {
     string_count++;
 
     return true;
-    // printMessage configuration code:
-    //
-    // if (size == 0) return;
-
-    // if (current_pos >= MAX_STRINGS) return;
-
-    // size_t copy_len = (size < (MAX_STRING_LENGTH - 1)) ? size : (MAX_STRING_LENGTH - 1);
-    // memcpy(strings[current_pos], str, copy_len);
-    // current_pos++;
-    
-    // char temp_str[MAX_STRING_LENGTH];
-    // strcpy(temp_str, str);
-
-    // strcat(temp_str, "  ");
-    // size_t len = strlen(temp_str);
-    // temp_str[len] = '\0';
-    // temp_str[len + 1] = 0x03;
-    
-
-    // memcpy(&printMessage[current_offset], temp_str, len + 2);
-    // current_offset = len + 1;
-    // scroll_pos = 0;
-    // HAL_Delay(1);
 }
 
 /**
  * @brief Remove the last string in the list
  */
 void rem(void){
-
     string_count--; // decrement strings count
     pool_tail = string_offsets[string_count];
-
-    // printMessage configuration:
-    //
-    // if (current_pos > 0) {
-    //     --current_pos;
-    //     memset(strings[current_pos], 0, sizeof(strings[current_pos]));
-    // }
-    // memset(printMessage, 0, sizeof(printMessage));
-    // scroll_pos = 0;
 }
 
 /**
@@ -123,16 +90,6 @@ void clr(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR){
 
     string_count = 0;
     pool_tail = 0;
-    
-    // printMessage configuration
-    //
-    // memset(printMessage, 0, sizeof(printMessage));
-    // for (int i = 0; i < MAX_STRINGS; i++) {
-    //     memset(strings[i], 0, sizeof(strings[i]));
-    // }
-    // current_offset = 0;
-    // current_pos = 0;
-    // scroll_pos = 0;
 }
 
 bool needsScroll(uint16_t LCD_COLS){
@@ -145,14 +102,14 @@ bool needsScroll(uint16_t LCD_COLS){
  */
 void writeNoScroll(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR){
     //TODO: #26 Do the formatting here for adding spaces (may want to make a seperate method used for this and writeScrolling)
-    CharLCD_WriteNoScroll(hi2c1, I2C_ADDR, message_pool);
+    CharLCD_WriteNoScroll(hi2c1, I2C_ADDR, message_pool, pool_tail);
 }
 
 /**
  * @brief Displays the `message` `char`
  */
 void writeScrolling(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR, uint8_t LCD_COLS){
-    CharLCD_WriteScrolling(hi2c1, I2C_ADDR, LCD_COLS, scroll_pos, message_pool);
+    CharLCD_WriteScrolling(hi2c1, I2C_ADDR, LCD_COLS, scroll_pos, message_pool, pool_tail);
     if(scroll_pos < pool_tail - LCD_COLS){
         scroll_pos++;
     }else{
@@ -192,8 +149,11 @@ HAL_StatusTypeDef EEPROM_ReadBuffer(I2C_HandleTypeDef *hi2c1) {
     pool_tail = header.tail;
     memcpy(string_offsets, header.offsets, sizeof(string_offsets));
     
+    // debug message to show string_count and pool_tail on read
     createMetadataString(debug_msg, sizeof(debug_msg), string_count, pool_tail);
     HAL_UART_Transmit(log_uart, (uint8_t*)debug_msg, strlen(debug_msg), HAL_MAX_DELAY);
+
+
     // 4. Read the raw message_pool data back into RAM
     if (pool_tail > 0) {
         uint16_t pool_address = HEADER_ADDRESS + sizeof(EEPROM_Header_t);

@@ -178,7 +178,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    if (eeprom_save_requested) {
+    if (eeprom_save_requested) { //power has dropped below 2.9V
       eeprom_save_requested = false;
       LCD_Backlight_Off(&hi2c1, I2C_ADDR);
       writeToEEPROM(&hi2c1);
@@ -201,27 +201,19 @@ int main(void)
 
 	  if (new_message_ready) {
 		  new_message_ready = false;
-		  bool persist_message = false;
       if (strncmp(message, "add", 3) == 0) {
         SplitAndRemove_String(message, "add");
         add(message, strlen(message));
-        persist_message = true;
         //buildMessage();
 
       } else if (strncmp(message, "rem", 3) == 0) {
         // TODO fix the way rem works
         rem();
-        persist_message = true;
       } else if (strncmp(message, "clr", 3) == 0) {
         clr(&hi2c1, I2C_ADDR);
-        persist_message = true;
       } else {
         char* msg = "Unrecognized command\r\n\n";
         HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
-      }
-
-      if (persist_message) {
-        writeToEEPROM(&hi2c1);
       }
       
       display = true;
