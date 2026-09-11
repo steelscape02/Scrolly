@@ -47,7 +47,7 @@ void sensorInit(UART_HandleTypeDef *huart) {
     log_uart = huart;
 }
 
-void createMetadataString(char *buf, size_t buf_size, uint8_t string_count, uint8_t pool_tail){
+void createMetadataString(char *buf, size_t buf_size, uint8_t string_count, uint16_t pool_tail){
     snprintf(buf, buf_size, "string_count: %u\r\npool_tail: %u\r\n", string_count, pool_tail);
 }
 
@@ -78,8 +78,10 @@ bool add(char *str, size_t len) {
  * @brief Remove the last string in the list
  */
 void rem(void){
+    uint16_t previous_tail = pool_tail;
     string_count--; // decrement strings count
     pool_tail = string_offsets[string_count];
+    memset(&message_pool[pool_tail], 0, previous_tail - pool_tail);
 }
 
 /**
@@ -90,6 +92,7 @@ void clr(I2C_HandleTypeDef *hi2c1, uint8_t I2C_ADDR){
 
     string_count = 0;
     pool_tail = 0;
+    memset(message_pool, 0, sizeof(message_pool));
 }
 
 bool needsScroll(uint16_t LCD_COLS){
@@ -126,77 +129,52 @@ HAL_StatusTypeDef EEPROM_ReadBuffer(I2C_HandleTypeDef *hi2c1) {
     HAL_StatusTypeDef status = HAL_OK;
     EEPROM_Header_t header;
 
-    // 1. Read the metadata header from address 0x00
-    status = EEPROM_ReadMessage(
-        hi2c1,
-        MESSAGE_BLOCK,
-        HEADER_ADDRESS,
-        (uint8_t *)&header,
-        sizeof(EEPROM_Header_t)
-    );
+    status = EEPROM_ReadMessage(hi2c1, MESSAGE_BLOCK, HEADER_ADDRESS,
+                                 (uint8_t *)&header, sizeof(EEPROM_Header_t));
     if (status != HAL_OK) return status;
 
-    // 2. Sanity check read data to prevent buffer overruns or corrupted EEPROM loads
+    // Bounds check (unchanged) — cheap first-pass filter
     if (header.count > MAX_STRINGS || header.tail > MAX_MESSAGE_LENGTH) {
-        // EEPROM holds uninitialized or corrupted data—reset local state
         string_count = 0;
         pool_tail = 0;
         return HAL_ERROR;
     }
 
-    // 3. Restore control state and offsets
+    memset(message_pool, 0, sizeof(message_pool));
+    if (header.tail > 0) {
+        uint16_t pool_address = HEADER_ADDRESS + sizeof(EEPROM_Header_t);
+        status = EEPROM_ReadMessage(hi2c1, MESSAGE_BLOCK, pool_address,
+                                     (uint8_t *)message_pool, header.tail);
+        if (status != HAL_OK) return status;
+    }
+
+
     string_count = header.count;
     pool_tail = header.tail;
     memcpy(string_offsets, header.offsets, sizeof(string_offsets));
-    
-    // debug message to show string_count and pool_tail on read
-    createMetadataString(debug_msg, sizeof(debug_msg), string_count, pool_tail);
-    HAL_UART_Transmit(log_uart, (uint8_t*)debug_msg, strlen(debug_msg), HAL_MAX_DELAY);
 
-
-    // 4. Read the raw message_pool data back into RAM
-    if (pool_tail > 0) {
-        uint16_t pool_address = HEADER_ADDRESS + sizeof(EEPROM_Header_t);
-
-        status = EEPROM_ReadMessage(
-            hi2c1,
-            MESSAGE_BLOCK,
-            pool_address,
-            (uint8_t *)message_pool,
-            pool_tail
-        );
-    }else{
+    // Debug I/O removed from this path — reinstate only under #ifdef DEBUG
+    #ifdef DEBUG
         snprintf(debug_msg, sizeof(debug_msg), "pool tail is 0\r\n");
         HAL_UART_Transmit(log_uart, (uint8_t*)debug_msg, strlen(debug_msg), HAL_MAX_DELAY);
-    }
-
+    #endif
     return status;
 }
 
 
-
+/**
+ * @brief Write `strings` array to EEPROM using a commit-last pattern.
+ *        Payload is written FIRST; header is committed LAST so a power
+ *        failure mid-write can never leave a header pointing at
+ *        incomplete pool data.
+ */
 HAL_StatusTypeDef writeToEEPROM(I2C_HandleTypeDef *hi2c1) {
     HAL_StatusTypeDef status = HAL_OK;
-
-    // 1. Pack the metadata header
-    EEPROM_Header_t header;
-    header.count = string_count;
-    header.tail = pool_tail;
-    memcpy(header.offsets, string_offsets, sizeof(string_offsets));
-
-    // 2. Write the metadata header to the start of the EEPROM
-    status = EEPROM_WriteBuffer(
-        hi2c1,
-        MESSAGE_BLOCK,
-        HEADER_ADDRESS,
-        (const uint8_t *)&header,
-        sizeof(EEPROM_Header_t)
-    );
-    if (status != HAL_OK) return status;
-
-    // 3. Write raw message_pool data immediately following the header
     uint16_t pool_address = HEADER_ADDRESS + sizeof(EEPROM_Header_t);
-    
+
+    // 1. Write the raw message_pool data FIRST.
+    //    If power dies here, the OLD header (not yet overwritten) still
+    //    points at the OLD, fully-intact pool -> no corruption on next read.
     if (pool_tail > 0) {
         status = EEPROM_WriteBuffer(
             hi2c1,
@@ -205,37 +183,59 @@ HAL_StatusTypeDef writeToEEPROM(I2C_HandleTypeDef *hi2c1) {
             (const uint8_t *)message_pool,
             pool_tail
         );
+        if (status != HAL_OK) return status; // header untouched, old data still valid
     }
+
+    // 2. Pack the metadata header, including a CRC over the payload
+    //    that was just written. This lets the reader detect any torn
+    //    write that still slipped through (e.g. failure inside this
+    //    function call, I2C bus glitch, etc.)
+    EEPROM_Header_t header;
+    header.count = string_count;
+    header.tail  = pool_tail;
+    memcpy(header.offsets, string_offsets, sizeof(string_offsets));
+
+    // 3. Commit the header LAST — this is the only step that "publishes"
+    //    the new data as valid. Keep this write as small/fast as possible.
+    status = EEPROM_WriteBuffer(
+        hi2c1,
+        MESSAGE_BLOCK,
+        HEADER_ADDRESS,
+        (const uint8_t *)&header,
+        sizeof(EEPROM_Header_t)
+    );
 
     return status;
 }
 
 /**
- * @brief Write `strings` array to EEPROM
- * @param hi2c1 Pointer to I2C handle (e.g., &hi2c1)
- * @return HAL_StatusTypeDef indicating success or failure
+ * @brief Write arbitrary-length data across 24LC08B page boundaries.
+ *        Debug UART removed: it has no place in a function that may run
+ *        under a tight power-loss hold-up budget.
  */
-// Helper to safely write arbitrary length data across 24LC08B page boundaries
-HAL_StatusTypeDef EEPROM_WriteBuffer(I2C_HandleTypeDef *hi2c, uint8_t block, uint16_t mem_addr, const uint8_t *pData, uint16_t size) {
-    HAL_StatusTypeDef status = HAL_OK;
+HAL_StatusTypeDef EEPROM_WriteBuffer(I2C_HandleTypeDef *hi2c, uint8_t block,
+                                      uint16_t mem_addr, const uint8_t *pData,
+                                      uint16_t size) {
     uint16_t bytes_written = 0;
 
     while (bytes_written < size) {
-        // 24LC08B page size is 16 bytes
         uint8_t page_offset = (mem_addr + bytes_written) % 16;
         uint16_t chunk_size = 16 - page_offset;
-
         if (chunk_size > (size - bytes_written)) {
             chunk_size = size - bytes_written;
         }
 
-        status = EEPROM_WritePage(hi2c, block, mem_addr + bytes_written, &pData[bytes_written], chunk_size);
+        HAL_StatusTypeDef status = EEPROM_WritePage(
+            hi2c, block, mem_addr + bytes_written, &pData[bytes_written], chunk_size);
         if (status != HAL_OK) return status;
 
         bytes_written += chunk_size;
-        
-        // 24LC08B requires up to 5ms tWR write cycle time between page writes
-        HAL_Delay(5); 
+
+        // TODO: replace fixed HAL_Delay(5) with ACK-polling (send a
+        // dummy start condition and check for NACK) so you wait only as
+        // long as actually needed, and so this doesn't silently rely on
+        // SysTick ticking correctly if called from/near the PVD ISR.
+        HAL_Delay(5);
     }
 
     return HAL_OK;

@@ -164,17 +164,39 @@ HAL_StatusTypeDef EEPROM_ReadMessage(I2C_HandleTypeDef *hi2c, uint8_t block, uin
         return HAL_ERROR;
     }
 
-    uint16_t dev_address = (EEPROM_I2C_ADDRESS | (block & 0x03)) << 1;
+    uint16_t global_address = ((uint16_t)(block & 0x03) << 8) | start_address;
+    if (global_address >= EEPROM_TOTAL_SIZE || buffer_size > EEPROM_TOTAL_SIZE - global_address) {
+        return HAL_ERROR;
+    }
 
-    // Single hardware call streams the entire block over I2C instantly
-    return HAL_I2C_Mem_Read(
-        hi2c,
-        dev_address,
-        start_address,
-        I2C_MEMADD_SIZE_8BIT,
-        buffer,
-        (uint16_t)buffer_size,
-        1000 // 1 second timeout instead of HAL_MAX_DELAY
-    );
+    size_t bytes_read = 0;
+    while (bytes_read < buffer_size) {
+        uint16_t current_address = global_address + bytes_read;
+        uint8_t current_block = (current_address >> 8) & 0x03;
+        uint8_t current_offset = current_address & 0xFF;
+        size_t bytes_to_block_end = EEPROM_BLOCK_SIZE - current_offset;
+        size_t bytes_to_read = buffer_size - bytes_read;
+        if (bytes_to_read > bytes_to_block_end) {
+            bytes_to_read = bytes_to_block_end;
+        }
+
+        uint16_t dev_address = (EEPROM_I2C_ADDRESS | current_block) << 1;
+        HAL_StatusTypeDef status = HAL_I2C_Mem_Read(
+            hi2c,
+            dev_address,
+            current_offset,
+            I2C_MEMADD_SIZE_8BIT,
+            &buffer[bytes_read],
+            (uint16_t)bytes_to_read,
+            1000
+        );
+        if (status != HAL_OK) {
+            return status;
+        }
+
+        bytes_read += bytes_to_read;
+    }
+
+    return HAL_OK;
 }
 
